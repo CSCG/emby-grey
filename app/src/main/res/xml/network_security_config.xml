@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">toonamiaftermath.com</domain>
+        <domain includeSubdomains="true">akamaized.net</domain>
+        <domain includeSubdomains="true">daiconnect.com</domain>
+        <domain includeSubdomains="true">amagi.tv</domain>
+        <domain includeSubdomains="true">bozztv.com</domain>
+        <domain includeSubdomains="true">30a-tv.com</domain>
+    </domain-config>
+</network-security-config>
