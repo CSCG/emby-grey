@@ -2,7 +2,6 @@ package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Audiotrack
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudDownload
@@ -37,12 +35,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Transform
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,7 +47,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -81,20 +76,20 @@ import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.data.local.DownloadItemEntity
 import com.example.data.model.PlaybackQuality
-import com.example.data.repository.DemoDataProvider
 import com.example.ui.components.MediaPosterCard
 import com.example.ui.components.SectionHeader
-import com.example.ui.theme.AccentAmber
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentEmerald
-import com.example.ui.theme.AccentPurple
-import com.example.ui.theme.CinemaBlack
-import com.example.ui.theme.CinemaCardBorder
-import com.example.ui.theme.CinemaDarkSurface
-import com.example.ui.theme.CinemaSurfaceVariant
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.AppAccent
+import com.example.ui.theme.AppBackground
+import com.example.ui.theme.AppDivider
+import com.example.ui.theme.AppElevatedSurface
+import com.example.ui.theme.AppRadii
+import com.example.ui.theme.AppSelectedSurface
+import com.example.ui.theme.AppSpacing
+import com.example.ui.theme.AppSurface
+import com.example.ui.theme.AppTextPrimary
+import com.example.ui.theme.AppTextSecondary
+import com.example.ui.theme.AppTextTertiary
+import com.example.ui.theme.AppTypography
 import com.example.ui.viewmodel.EmbyViewModel
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -103,32 +98,35 @@ fun ItemDetailScreen(
     itemId: String,
     viewModel: EmbyViewModel,
     onNavigateBack: () -> Unit,
+    onNavigateToItem: (String) -> Unit = {},
     onPlayMedia: (String, PlaybackQuality, Boolean) -> Unit
 ) {
     BackHandler { onNavigateBack() }
 
-    LaunchedEffect(itemId) {
-        viewModel.selectItem(itemId)
-    }
-
     val item by viewModel.selectedItem.collectAsState()
     val episodes by viewModel.episodes.collectAsState()
-    val downloads by viewModel.downloads.collectAsState()
+    val collectionItems by viewModel.collectionItems.collectAsState()
     val similarItems by viewModel.similarItems.collectAsState()
+    val downloads by viewModel.downloads.collectAsState()
+
     val selectedPerson by viewModel.selectedPerson.collectAsState()
     val personItems by viewModel.personItems.collectAsState()
 
     val currentDownload = downloads.firstOrNull { it.id == itemId }
     var transcodeMenuExpanded by remember { mutableStateOf(false) }
 
+    LaunchedEffect(itemId) {
+        viewModel.selectItem(itemId)
+    }
+
     if (item == null) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(CinemaBlack),
+                .background(AppBackground),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = AccentCyan)
+            CircularProgressIndicator(color = AppAccent)
         }
         return
     }
@@ -137,12 +135,19 @@ fun ItemDetailScreen(
     val resumeMs = currentItem.resumePositionTicks / 10_000L
     val totalDurationMs = currentItem.durationMinutes * 60 * 1000L
     val hasResume = resumeMs > 5000L && (totalDurationMs <= 0 || resumeMs < (totalDurationMs - 15000L))
-    val isPlayed = currentItem.userData?.played == true
+    val isSeries = currentItem.type.equals("Series", ignoreCase = true)
+    val isCollection = currentItem.type.equals("BoxSet", ignoreCase = true) ||
+            currentItem.type.equals("CollectionFolder", ignoreCase = true) ||
+            currentItem.type.equals("Playlist", ignoreCase = true) ||
+            currentItem.type.equals("Folder", ignoreCase = true) ||
+            currentItem.type?.contains("Collection", ignoreCase = true) == true ||
+            currentItem.id.startsWith("boxset_") ||
+            collectionItems.isNotEmpty()
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(AppBackground)
             .testTag("item_detail_screen")
     ) {
         // Full Hero Backdrop Header
@@ -150,7 +155,7 @@ fun ItemDetailScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(320.dp)
+                    .height(340.dp)
             ) {
                 val detailContext = LocalContext.current
                 SubcomposeAsyncImage(
@@ -162,39 +167,24 @@ fun ItemDetailScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     loading = {
-                        Box(
-                            modifier = Modifier.fillMaxSize().background(CinemaDarkSurface),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(32.dp),
-                                color = AccentCyan.copy(alpha = 0.5f),
-                                strokeWidth = 2.dp
-                            )
-                        }
+                        Box(modifier = Modifier.fillMaxSize().background(AppElevatedSurface))
                     },
                     error = {
                         Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(CinemaSurfaceVariant, CinemaDarkSurface)
-                                    )
-                                ),
+                            modifier = Modifier.fillMaxSize().background(AppElevatedSurface),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Movie,
                                 contentDescription = null,
-                                tint = TextMuted.copy(alpha = 0.4f),
+                                tint = AppTextTertiary,
                                 modifier = Modifier.size(64.dp)
                             )
                         }
                     }
                 )
 
-                // Atmospheric Scrim
+                // Atmospheric functional dark vertical gradient
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -203,8 +193,8 @@ fun ItemDetailScreen(
                                 colors = listOf(
                                     Color.Black.copy(alpha = 0.5f),
                                     Color.Transparent,
-                                    CinemaBlack.copy(alpha = 0.8f),
-                                    CinemaBlack
+                                    AppBackground.copy(alpha = 0.8f),
+                                    AppBackground
                                 )
                             )
                         )
@@ -215,8 +205,7 @@ fun ItemDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .padding(horizontal = AppSpacing.xs, vertical = AppSpacing.xs),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -237,16 +226,15 @@ fun ItemDetailScreen(
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = AppSpacing.md, vertical = AppSpacing.xs),
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Box(
                         modifier = Modifier
-                            .width(100.dp)
+                            .width(105.dp)
                             .aspectRatio(2f / 3f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .border(1.dp, CinemaCardBorder, RoundedCornerShape(10.dp))
-                            .background(CinemaDarkSurface)
+                            .clip(RoundedCornerShape(AppRadii.card))
+                            .background(AppElevatedSurface)
                     ) {
                         SubcomposeAsyncImage(
                             model = ImageRequest.Builder(detailContext)
@@ -255,85 +243,49 @@ fun ItemDetailScreen(
                                 .build(),
                             contentDescription = currentItem.name,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            loading = {
-                                Box(
-                                    modifier = Modifier.fillMaxSize().background(CinemaDarkSurface),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        color = AccentCyan.copy(alpha = 0.5f),
-                                        strokeWidth = 2.dp
-                                    )
-                                }
-                            }
+                            contentScale = ContentScale.Crop
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(AppSpacing.sm))
 
                     Column {
                         Text(
                             text = currentItem.name,
-                            color = TextPrimary,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            style = AppTypography.heroTitle,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(AppSpacing.xxs))
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            if (currentItem.productionYear != null) {
-                                Text(
-                                    text = currentItem.productionYear.toString(),
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            if (currentItem.durationMinutes > 0) {
-                                Text(
-                                    text = "${currentItem.durationMinutes} min",
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            if (currentItem.officialRating != null) {
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = CinemaSurfaceVariant
-                                ) {
-                                    Text(
-                                        text = currentItem.officialRating!!,
-                                        color = TextPrimary,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
+                        val year = currentItem.productionYear?.toString()
+                        val duration = if (currentItem.durationMinutes > 0) "${currentItem.durationMinutes} min" else null
+                        val rating = currentItem.officialRating
+                        val metaParts = listOfNotNull(year, duration, rating).joinToString(" • ")
+
+                        if (metaParts.isNotBlank()) {
+                            Text(
+                                text = metaParts,
+                                style = AppTypography.metadata
+                            )
                         }
 
                         if (currentItem.communityRating != null && currentItem.communityRating!! > 0) {
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.Star,
-                                    contentDescription = "Rating",
-                                    tint = AccentAmber,
-                                    modifier = Modifier.size(14.dp)
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFB300),
+                                    modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = String.format("%.1f / 10", currentItem.communityRating),
-                                    color = TextPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
+                                    text = String.format("%.1f", currentItem.communityRating),
+                                    style = AppTypography.metadata,
+                                    color = AppTextPrimary,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
@@ -342,127 +294,127 @@ fun ItemDetailScreen(
             }
         }
 
-        // Action Buttons Row (Direct Play, Transcode Menu, Offline Download)
+        // Action Buttons Row (Play, Resume, Transcode)
         item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            val targetEpisode = if (isSeries) {
+                episodes.firstOrNull { it.resumePositionTicks > 0 && !it.isPlayed }
+                    ?: episodes.firstOrNull { !it.isPlayed }
+                    ?: episodes.firstOrNull()
+            } else null
+            val targetTitle = if (isCollection) {
+                collectionItems.firstOrNull { it.resumePositionTicks > 0 && !it.isPlayed }
+                    ?: collectionItems.firstOrNull { !it.isPlayed }
+                    ?: collectionItems.firstOrNull()
+            } else null
+            val targetPlayableId = targetEpisode?.id ?: targetTitle?.id ?: currentItem.id
+
+            Column(modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)
                 ) {
-                    // Direct Play / Resume Button
+                    // Primary Play Button
                     Button(
-                        onClick = { onPlayMedia(currentItem.id, PlaybackQuality.DIRECT_PLAY, false) },
+                        onClick = { onPlayMedia(targetPlayableId, PlaybackQuality.DIRECT_PLAY, false) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
+                            .height(44.dp)
                             .testTag("direct_play_button"),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = AccentCyan,
-                            contentColor = CinemaBlack
+                            containerColor = AppAccent,
+                            contentColor = Color(0xFF04191C)
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(AppRadii.button)
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Play", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
+                        val buttonLabel = when {
+                            hasResume -> "Resume"
+                            isSeries && targetEpisode != null -> "Play S${targetEpisode.parentIndexNumber ?: 1}E${targetEpisode.indexNumber ?: 1}"
+                            isCollection && targetTitle != null -> "Play Collection"
+                            isCollection -> "Play Collection"
+                            else -> "Play"
+                        }
                         Text(
-                            text = if (hasResume) "Resume" else "Direct Play",
-                            fontWeight = FontWeight.Bold,
+                            text = buttonLabel,
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp
                         )
                     }
 
                     if (hasResume) {
-                        OutlinedButton(
-                            onClick = { onPlayMedia(currentItem.id, PlaybackQuality.DIRECT_PLAY, true) },
+                        Button(
+                            onClick = { onPlayMedia(targetPlayableId, PlaybackQuality.DIRECT_PLAY, true) },
                             modifier = Modifier
-                                .height(48.dp)
+                                .height(44.dp)
                                 .testTag("start_from_beginning_button"),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                            shape = RoundedCornerShape(12.dp)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AppElevatedSurface,
+                                contentColor = AppTextPrimary
+                            ),
+                            shape = RoundedCornerShape(AppRadii.button)
                         ) {
-                            Text("Start Over", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Start Over", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         }
                     }
 
                     // Transcode Options Dropdown Button
                     Box {
-                        OutlinedButton(
+                        Button(
                             onClick = { transcodeMenuExpanded = true },
                             modifier = Modifier
-                                .height(48.dp)
+                                .height(44.dp)
                                 .testTag("transcode_menu_button"),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentPurple),
-                            shape = RoundedCornerShape(12.dp),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
-                                brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan))
-                            )
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AppElevatedSurface,
+                                contentColor = AppTextSecondary
+                            ),
+                            shape = RoundedCornerShape(AppRadii.button)
                         ) {
-                            Icon(Icons.Default.Transform, contentDescription = "Transcode", modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Transform, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Transcode", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Quality", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         }
 
                         DropdownMenu(
                             expanded = transcodeMenuExpanded,
                             onDismissRequest = { transcodeMenuExpanded = false },
-                            modifier = Modifier.background(CinemaDarkSurface)
+                            modifier = Modifier
+                                .background(AppElevatedSurface)
+                                .clip(RoundedCornerShape(AppRadii.card))
                         ) {
                             DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(Icons.Default.HighQuality, contentDescription = null, tint = AccentCyan)
-                                },
-                                text = {
-                                    Column {
-                                        Text("1080p (10 Mbps)", color = TextPrimary, fontWeight = FontWeight.Bold)
-                                        Text("Hardware accelerated", color = TextMuted, fontSize = 11.sp)
-                                    }
-                                },
+                                text = { Text("1080p (10 Mbps)", color = AppTextPrimary, fontSize = 14.sp) },
                                 onClick = {
                                     transcodeMenuExpanded = false
-                                    onPlayMedia(currentItem.id, PlaybackQuality.P1080, false)
+                                    onPlayMedia(targetPlayableId, PlaybackQuality.P1080, false)
                                 }
                             )
                             DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(Icons.Default.Speed, contentDescription = null, tint = AccentCyan)
-                                },
-                                text = {
-                                    Column {
-                                        Text("720p (4 Mbps)", color = TextPrimary, fontWeight = FontWeight.Bold)
-                                        Text("Smooth HD streaming", color = TextMuted, fontSize = 11.sp)
-                                    }
-                                },
+                                text = { Text("720p (4 Mbps)", color = AppTextPrimary, fontSize = 14.sp) },
                                 onClick = {
                                     transcodeMenuExpanded = false
-                                    onPlayMedia(currentItem.id, PlaybackQuality.P720, false)
+                                    onPlayMedia(targetPlayableId, PlaybackQuality.P720, false)
                                 }
                             )
                             DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(Icons.Default.Speed, contentDescription = null, tint = AccentCyan)
-                                },
-                                text = {
-                                    Column {
-                                        Text("480p (1.5 Mbps)", color = TextPrimary, fontWeight = FontWeight.Bold)
-                                        Text("Mobile data saving", color = TextMuted, fontSize = 11.sp)
-                                    }
-                                },
+                                text = { Text("480p (1.5 Mbps)", color = AppTextPrimary, fontSize = 14.sp) },
                                 onClick = {
                                     transcodeMenuExpanded = false
-                                    onPlayMedia(currentItem.id, PlaybackQuality.P480, false)
+                                    onPlayMedia(targetPlayableId, PlaybackQuality.P480, false)
                                 }
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
 
-                // Offline Synchronization Action Button
+                // Offline Download Action
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(AppRadii.card))
                         .clickable {
                             if (currentDownload == null) {
                                 viewModel.downloadItem(currentItem)
@@ -470,56 +422,47 @@ fun ItemDetailScreen(
                                 viewModel.deleteDownload(currentItem.id)
                             }
                         }
-                        .border(1.dp, CinemaCardBorder, RoundedCornerShape(12.dp))
                         .testTag("offline_sync_button"),
-                    shape = RoundedCornerShape(12.dp),
-                    color = CinemaSurfaceVariant
+                    shape = RoundedCornerShape(AppRadii.card),
+                    color = AppElevatedSurface
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             val icon = when (currentDownload?.status) {
                                 DownloadItemEntity.STATUS_COMPLETED -> Icons.Default.CloudDone
-                                DownloadItemEntity.STATUS_DOWNLOADING -> Icons.Default.CloudDownload
                                 else -> Icons.Default.CloudDownload
                             }
-                            val iconColor = when (currentDownload?.status) {
-                                DownloadItemEntity.STATUS_COMPLETED -> AccentEmerald
-                                DownloadItemEntity.STATUS_DOWNLOADING -> AccentCyan
-                                else -> TextSecondary
-                            }
+                            val iconTint = if (currentDownload?.status == DownloadItemEntity.STATUS_COMPLETED) AppAccent else AppTextSecondary
 
                             Icon(
                                 imageVector = icon,
-                                contentDescription = "Download",
-                                tint = iconColor,
-                                modifier = Modifier.size(20.dp)
+                                contentDescription = null,
+                                tint = iconTint,
+                                modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 val title = when (currentDownload?.status) {
-                                    DownloadItemEntity.STATUS_COMPLETED -> "Downloaded for Offline Playback"
-                                    DownloadItemEntity.STATUS_DOWNLOADING -> "Downloading to Device..."
-                                    else -> "Download for Offline Synchronization"
+                                    DownloadItemEntity.STATUS_COMPLETED -> "Downloaded for Offline"
+                                    DownloadItemEntity.STATUS_DOWNLOADING -> "Downloading..."
+                                    else -> "Download"
                                 }
                                 Text(
                                     text = title,
-                                    color = TextPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    style = AppTypography.cardTitle
                                 )
                                 val sub = when (currentDownload?.status) {
-                                    DownloadItemEntity.STATUS_COMPLETED -> "${currentDownload.formattedSize} • Tap to remove"
-                                    DownloadItemEntity.STATUS_DOWNLOADING -> "${(currentDownload.progressFraction * 100).toInt()}% completed"
-                                    else -> "Play anywhere without an active connection"
+                                    DownloadItemEntity.STATUS_COMPLETED -> "${currentDownload.formattedSize} • Tap to delete"
+                                    DownloadItemEntity.STATUS_DOWNLOADING -> "${(currentDownload.progressFraction * 100).toInt()}% complete"
+                                    else -> "Save to device for offline playback"
                                 }
                                 Text(
                                     text = sub,
-                                    color = TextSecondary,
-                                    fontSize = 11.sp
+                                    style = AppTypography.metadata
                                 )
                             }
                         }
@@ -527,16 +470,16 @@ fun ItemDetailScreen(
                         if (currentDownload?.status == DownloadItemEntity.STATUS_DOWNLOADING) {
                             CircularProgressIndicator(
                                 progress = { currentDownload.progressFraction },
-                                modifier = Modifier.size(24.dp),
-                                color = AccentCyan,
-                                strokeWidth = 2.5.dp
+                                modifier = Modifier.size(20.dp),
+                                color = AppAccent,
+                                strokeWidth = 2.dp
                             )
                         } else if (currentDownload?.status == DownloadItemEntity.STATUS_COMPLETED) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete",
-                                tint = TextMuted,
-                                modifier = Modifier.size(18.dp)
+                                tint = AppTextTertiary,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -550,20 +493,19 @@ fun ItemDetailScreen(
                 FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = AppSpacing.md, vertical = AppSpacing.xxs),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)
                 ) {
                     currentItem.genres.forEach { genre ->
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = CinemaSurfaceVariant
+                            shape = RoundedCornerShape(AppRadii.badge),
+                            color = AppElevatedSurface
                         ) {
                             Text(
                                 text = genre,
-                                color = TextSecondary,
-                                fontSize = 11.sp,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                style = AppTypography.metadata,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
                     }
@@ -572,146 +514,85 @@ fun ItemDetailScreen(
         }
 
         // Overview Synopsis
-        item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Text(
-                    text = "Overview",
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = currentItem.overview ?: "No overview description available.",
-                    color = TextSecondary,
-                    fontSize = 13.sp,
-                    lineHeight = 20.sp
-                )
-            }
-        }
-
-        // Technical Media & Subtitle Details
-        item {
-            val source = currentItem.mediaSources?.firstOrNull()
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .border(1.dp, CinemaCardBorder, RoundedCornerShape(14.dp)),
-                shape = RoundedCornerShape(14.dp),
-                color = CinemaDarkSurface
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+        if (!currentItem.overview.isNullOrBlank()) {
+            item {
+                Column(modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm)) {
                     Text(
-                        text = "Stream & Transcode Details",
-                        color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "Overview",
+                        style = AppTypography.sectionTitle
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.ClosedCaption, contentDescription = "Subtitles", tint = AccentCyan, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            val subCount = source?.mediaStreams?.count { it.type.equals("Subtitle", true) } ?: 0
-                            Text(
-                                text = if (subCount > 0) "$subCount Subtitle Tracks" else "Subtitles Available",
-                                color = TextSecondary,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Audiotrack, contentDescription = "Audio", tint = AccentEmerald, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            val audioCodec = source?.mediaStreams?.firstOrNull { it.type.equals("Audio", true) }?.codec ?: "AAC"
-                            Text(
-                                text = "Audio: $audioCodec",
-                                color = TextSecondary,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Direct Play: Supported",
-                            color = AccentEmerald,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Hardware Transcode: Enabled",
-                            color = AccentPurple,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(AppSpacing.xxs))
+                    Text(
+                        text = currentItem.overview,
+                        style = AppTypography.body
+                    )
                 }
             }
         }
 
         // TV Series Episodes List
-        if (currentItem.type == "Series" && episodes.isNotEmpty()) {
-            item {
-                Text(
-                    text = "Episodes (${episodes.size})",
-                    color = TextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-                )
-            }
+        if (currentItem.type.equals("Series", ignoreCase = true)) {
+            if (episodes.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(AppSpacing.md),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = AppAccent,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                }
+            } else {
+                item {
+                    Text(
+                        text = "Episodes (${episodes.size})",
+                        style = AppTypography.sectionTitle,
+                        modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm)
+                    )
+                }
 
             items(episodes) { ep ->
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onPlayMedia(ep.id, PlaybackQuality.DIRECT_PLAY, false) }
-                        .border(1.dp, CinemaCardBorder, RoundedCornerShape(12.dp)),
-                    shape = RoundedCornerShape(12.dp),
-                    color = CinemaSurfaceVariant
+                        .padding(horizontal = AppSpacing.md, vertical = 4.dp)
+                        .clip(RoundedCornerShape(AppRadii.card))
+                        .clickable { onPlayMedia(ep.id, PlaybackQuality.DIRECT_PLAY, false) },
+                    shape = RoundedCornerShape(AppRadii.card),
+                    color = AppElevatedSurface
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(AppSpacing.sm),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(50.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(CinemaDarkSurface),
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(AppRadii.badge))
+                                .background(AppSurface),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = AccentCyan)
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = AppTextPrimary, modifier = Modifier.size(18.dp))
                         }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(AppSpacing.sm))
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "E${ep.indexNumber ?: 1}: ${ep.name}",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
+                                style = AppTypography.cardTitle,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            if (ep.overview != null) {
+                            if (!ep.overview.isNullOrBlank()) {
                                 Text(
                                     text = ep.overview,
-                                    color = TextSecondary,
-                                    fontSize = 11.sp,
+                                    style = AppTypography.metadata,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -721,10 +602,167 @@ fun ItemDetailScreen(
                         IconButton(onClick = { viewModel.downloadItem(ep) }) {
                             Icon(
                                 imageVector = Icons.Default.CloudDownload,
-                                contentDescription = "Download Episode",
-                                tint = AccentCyan,
-                                modifier = Modifier.size(20.dp)
+                                contentDescription = "Download",
+                                tint = AppTextSecondary,
+                                modifier = Modifier.size(18.dp)
                             )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+        // Collection Titles List
+        if (isCollection) {
+            if (collectionItems.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(AppSpacing.xl),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = AppAccent,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                }
+            } else {
+                item {
+                    Spacer(modifier = Modifier.height(AppSpacing.xs))
+                    SectionHeader(
+                        title = "Titles in Collection (${collectionItems.size})",
+                        subtitle = "Select any title to view details or play"
+                    )
+                    Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+                }
+
+                items(collectionItems) { titleItem ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = AppSpacing.md, vertical = 4.dp)
+                            .clip(RoundedCornerShape(AppRadii.card))
+                            .clickable { onNavigateToItem(titleItem.id) }
+                            .testTag("collection_title_${titleItem.id}"),
+                        shape = RoundedCornerShape(AppRadii.card),
+                        color = AppElevatedSurface
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(AppSpacing.sm),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Poster Thumbnail
+                            Box(
+                                modifier = Modifier
+                                    .width(60.dp)
+                                    .height(84.dp)
+                                    .clip(RoundedCornerShape(AppRadii.badge))
+                                    .background(AppSurface)
+                            ) {
+                                SubcomposeAsyncImage(
+                                    model = viewModel.getImageUrl(titleItem, isBackdrop = false),
+                                    contentDescription = titleItem.name,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                    loading = {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize().background(AppSurface),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator(
+                                                color = AppAccent,
+                                                modifier = Modifier.size(16.dp),
+                                                strokeWidth = 1.5.dp
+                                            )
+                                        }
+                                    },
+                                    error = {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize().background(AppSurface),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = if (titleItem.type == "Series") Icons.Default.Tv else Icons.Default.Movie,
+                                                contentDescription = null,
+                                                tint = AppTextTertiary,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                    }
+                                )
+
+                                // Resume Progress bar if partially watched
+                                if (titleItem.resumeFraction > 0.02f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(3.dp)
+                                            .align(Alignment.BottomCenter)
+                                            .background(AppSelectedSurface)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(fraction = titleItem.resumeFraction.coerceIn(0f, 1f))
+                                                .height(3.dp)
+                                                .background(AppAccent)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(AppSpacing.sm))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = titleItem.name,
+                                    style = AppTypography.cardTitle,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                val year = titleItem.productionYear?.toString()
+                                val dur = if (titleItem.durationMinutes > 0) "${titleItem.durationMinutes} min" else null
+                                val itemType = if (titleItem.type == "Series") "TV Series" else "Movie"
+                                val meta = listOfNotNull(year, dur, itemType).joinToString(" • ")
+                                Text(
+                                    text = meta,
+                                    style = AppTypography.metadata,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                if (!titleItem.overview.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = titleItem.overview,
+                                        style = AppTypography.metadata,
+                                        color = AppTextTertiary,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(AppSpacing.xs))
+
+                            // Action button: Play this specific title
+                            IconButton(
+                                onClick = { onPlayMedia(titleItem.id, PlaybackQuality.DIRECT_PLAY, false) },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(AppSurface, CircleShape)
+                                    .testTag("play_title_button_${titleItem.id}")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Play ${titleItem.name}",
+                                    tint = AppAccent,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -735,33 +773,33 @@ fun ItemDetailScreen(
         val people = currentItem.people ?: emptyList()
         if (people.isNotEmpty()) {
             item {
-                SectionHeader(
-                    title = "Cast & Crew",
-                    subtitle = "Actors, directors, and creators"
-                )
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
+                SectionHeader(title = "Cast & Crew")
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
                 ) {
                     items(people) { person ->
                         Surface(
                             modifier = Modifier
                                 .width(90.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(AppRadii.card))
                                 .clickable { viewModel.selectPerson(person) }
                                 .testTag("person_${person.id ?: person.name}"),
-                            shape = RoundedCornerShape(12.dp),
-                            color = CinemaSurfaceVariant
+                            shape = RoundedCornerShape(AppRadii.card),
+                            color = AppElevatedSurface
                         ) {
                             Column(
-                                modifier = Modifier.padding(8.dp),
+                                modifier = Modifier.padding(AppSpacing.xs),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(64.dp)
+                                        .size(56.dp)
                                         .clip(CircleShape)
-                                        .background(CinemaDarkSurface)
+                                        .background(AppSurface)
                                 ) {
                                     val photoUrl = viewModel.getPersonImageUrl(person)
                                     if (photoUrl != null) {
@@ -778,72 +816,67 @@ fun ItemDetailScreen(
                                         ) {
                                             Text(
                                                 text = person.name.take(1),
-                                                color = AccentCyan,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp
+                                                color = AppTextSecondary,
+                                                fontSize = 18.sp,
+                                                fontWeight = FontWeight.Medium
                                             )
                                         }
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(6.dp))
+                                Spacer(modifier = Modifier.height(AppSpacing.xxs))
 
                                 Text(
                                     text = person.name,
-                                    color = TextPrimary,
+                                    style = AppTypography.cardTitle,
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    overflow = TextOverflow.Ellipsis
                                 )
 
                                 if (!person.role.isNullOrBlank()) {
                                     Text(
                                         text = person.role,
-                                        color = TextMuted,
+                                        style = AppTypography.metadata,
+                                        color = AppTextTertiary,
                                         fontSize = 10.sp,
                                         maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
         // More Like This / Recommended Titles Section
         if (similarItems.isNotEmpty()) {
             item {
-                SectionHeader(
-                    title = "More Like This",
-                    subtitle = "Recommended from your media server"
-                )
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
+                SectionHeader(title = "More Like This")
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
                 ) {
                     items(similarItems) { sim ->
                         MediaPosterCard(
                             item = sim,
                             imageUrl = viewModel.getImageUrl(sim, isBackdrop = false),
-                            onClick = {
-                                viewModel.selectItem(sim.id)
-                            },
-                            modifier = Modifier.width(135.dp)
+                            onClick = { viewModel.selectItem(sim.id) },
+                            modifier = Modifier.width(135.dp),
+                            aspectRatio = 2f / 3f
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
         item {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(60.dp))
         }
     }
 
@@ -852,12 +885,12 @@ fun ItemDetailScreen(
         val person = selectedPerson!!
         ModalBottomSheet(
             onDismissRequest = { viewModel.clearSelectedPerson() },
-            containerColor = CinemaDarkSurface,
+            containerColor = AppElevatedSurface,
             sheetState = rememberModalBottomSheetState()
         ) {
             Column(
                 modifier = Modifier
-                    .padding(16.dp)
+                    .padding(AppSpacing.md)
                     .navigationBarsPadding()
             ) {
                 Row(
@@ -866,9 +899,9 @@ fun ItemDetailScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(54.dp)
+                            .size(50.dp)
                             .clip(CircleShape)
-                            .background(CinemaSurfaceVariant)
+                            .background(AppSurface)
                     ) {
                         val photoUrl = viewModel.getPersonImageUrl(person)
                         if (photoUrl != null) {
@@ -880,45 +913,39 @@ fun ItemDetailScreen(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(AppSpacing.sm))
                     Column {
                         Text(
                             text = person.name,
-                            color = TextPrimary,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
+                            style = AppTypography.sectionTitle
                         )
                         if (!person.role.isNullOrBlank()) {
                             Text(
-                                text = "Known for: ${person.role}",
-                                color = AccentCyan,
-                                fontSize = 12.sp
+                                text = person.role,
+                                style = AppTypography.metadata
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(AppSpacing.md))
 
                 Text(
                     text = "Titles on this Server",
-                    color = TextPrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    style = AppTypography.cardTitle
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
 
                 if (personItems.isEmpty()) {
                     Text(
                         text = "Searching media libraries...",
-                        color = TextMuted,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(vertical = 12.dp)
+                        style = AppTypography.metadata,
+                        modifier = Modifier.padding(vertical = AppSpacing.sm)
                     )
                 } else {
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         items(personItems) { pItem ->
@@ -929,13 +956,14 @@ fun ItemDetailScreen(
                                     viewModel.clearSelectedPerson()
                                     viewModel.selectItem(pItem.id)
                                 },
-                                modifier = Modifier.width(120.dp)
+                                modifier = Modifier.width(120.dp),
+                                aspectRatio = 2f / 3f
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(AppSpacing.lg))
             }
         }
     }

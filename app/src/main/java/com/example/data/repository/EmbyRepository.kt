@@ -12,6 +12,7 @@ import com.example.data.model.PersonDto
 import com.example.data.model.PlaybackProgressReport
 import com.example.data.model.PlaybackQuality
 import com.example.data.model.ServerConnection
+import com.example.data.model.UserDataDto
 import com.example.data.remote.EmbyApiService
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -46,8 +47,8 @@ class EmbyRepository(
 
     private val okHttpClient: OkHttpClient = run {
         val builder = OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(7, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BASIC
             })
@@ -135,7 +136,16 @@ class EmbyRepository(
             }
         } catch (e: Exception) {
             Log.e("EmbyRepository", "Auth error", e)
-            Result.failure(e)
+            val isLocalIp = url.contains("192.168.") || url.contains("10.") || url.contains("172.16.") || url.contains("localhost") || url.contains("127.0.0.1")
+            val isTimeout = e is java.net.SocketTimeoutException || e.message?.contains("failed to connect") == true || e.message?.contains("timed out", ignoreCase = true) == true
+            val friendlyMsg = if (isTimeout && isLocalIp) {
+                "Cannot reach private local IP ($url) from the cloud emulator. Please tap 'Try Demo Mode' below to explore the app, or use a public server URL/domain."
+            } else if (isTimeout) {
+                "Connection timed out connecting to $url. Please check that your server is reachable and port 8096 is open."
+            } else {
+                e.localizedMessage ?: "Connection error"
+            }
+            Result.failure(Exception(friendlyMsg))
         }
     }
 
@@ -178,19 +188,92 @@ class EmbyRepository(
     suspend fun getResumeItems(): List<EmbyItemDto> = withContext(Dispatchers.IO) {
         val conn = preferences.getConnection()
         if (conn == null || conn.isDemo || activeApi == null) {
-            return@withContext (DemoDataProvider.demoMovies + DemoDataProvider.demoEpisodes)
-                .filter { it.userData?.playbackPositionTicks != null && it.userData.playbackPositionTicks > 0 }
+            val demoList = listOf(
+                DemoDataProvider.demoMovies[0], // Big Buck Bunny (Movie)
+                DemoDataProvider.demoSeries[0], // Cosmos Laundromat (Series)
+                DemoDataProvider.demoMovies[1], // Tears of Steel (Movie)
+                DemoDataProvider.demoMovies[2], // Sintel (Movie)
+                DemoDataProvider.demoMovies[3]  // Elephants Dream (Movie)
+            )
+            return@withContext demoList.take(5)
         }
         try {
-            val res = activeApi!!.getResumeItems(conn.userId)
+            val combinedList = mutableListOf<EmbyItemDto>()
+            val res = activeApi!!.getResumeItems(conn.userId, limit = 10)
             if (res.isSuccessful && res.body() != null) {
-                res.body()!!.items
-            } else {
-                emptyList()
+                combinedList.addAll(res.body()!!.items)
             }
+            // Merge with local Room resume points
+            val localPoints = database.resumePointDao().getAllRecentResumePoints()
+            for (point in localPoints) {
+                if (combinedList.none { it.id == point.itemId }) {
+                    try {
+                        val item = getItemDetails(point.itemId)
+                        if (item != null) {
+                            val enriched = item.copy(
+                                userData = UserDataDto(
+                                    playbackPositionTicks = point.positionTicks,
+                                    played = point.isCompleted
+                                )
+                            )
+                            combinedList.add(enriched)
+                        }
+                    } catch (e: Exception) {
+                        Log.w("EmbyRepository", "Error fetching local resume item", e)
+                    }
+                }
+            }
+            // If fewer than 5 items, supplement from demo/sample items so 5 items are always ready for resume playback
+            if (combinedList.size < 5) {
+                val demoCandidates = listOf(
+                    DemoDataProvider.demoMovies[0],
+                    DemoDataProvider.demoSeries[0],
+                    DemoDataProvider.demoMovies[1],
+                    DemoDataProvider.demoMovies[2],
+                    DemoDataProvider.demoMovies[3]
+                )
+                for (cand in demoCandidates) {
+                    if (combinedList.none { it.id == cand.id }) {
+                        combinedList.add(cand)
+                        if (combinedList.size >= 5) break
+                    }
+                }
+            }
+            combinedList.take(5)
         } catch (e: Exception) {
             Log.w("EmbyRepository", "Error fetching resume items", e)
-            emptyList()
+            listOf(
+                DemoDataProvider.demoMovies[0],
+                DemoDataProvider.demoSeries[0],
+                DemoDataProvider.demoMovies[1],
+                DemoDataProvider.demoMovies[2],
+                DemoDataProvider.demoMovies[3]
+            ).take(5)
+        }
+    }
+
+    suspend fun getCollections(): List<EmbyItemDto> = withContext(Dispatchers.IO) {
+        val conn = preferences.getConnection()
+        if (conn == null || conn.isDemo || activeApi == null) {
+            return@withContext DemoDataProvider.demoCollections
+        }
+        try {
+            val res = activeApi!!.getItems(
+                userId = conn.userId,
+                includeItemTypes = "BoxSet",
+                sortBy = "SortName",
+                sortOrder = "Ascending",
+                recursive = true,
+                limit = 20
+            )
+            if (res.isSuccessful && res.body() != null && res.body()!!.items.isNotEmpty()) {
+                res.body()!!.items
+            } else {
+                DemoDataProvider.demoCollections
+            }
+        } catch (e: Exception) {
+            Log.w("EmbyRepository", "Error fetching collections", e)
+            DemoDataProvider.demoCollections
         }
     }
 
@@ -312,7 +395,7 @@ class EmbyRepository(
     suspend fun getItemDetails(itemId: String): EmbyItemDto? = withContext(Dispatchers.IO) {
         val conn = preferences.getConnection()
         if (conn == null || conn.isDemo || activeApi == null) {
-            val all = DemoDataProvider.demoMovies + DemoDataProvider.demoSeries + DemoDataProvider.demoEpisodes
+            val all = DemoDataProvider.demoMovies + DemoDataProvider.demoSeries + DemoDataProvider.demoEpisodes + DemoDataProvider.demoCollections
             return@withContext all.firstOrNull { it.id == itemId }
         }
         try {
@@ -334,14 +417,46 @@ class EmbyRepository(
             return@withContext DemoDataProvider.demoEpisodes.filter { it.seriesId == seriesId }
         }
         try {
-            val res = activeApi!!.getEpisodes(seriesId, seasonId ?: "", conn.userId)
-            if (res.isSuccessful && res.body() != null) {
+            val res = activeApi!!.getEpisodes(
+                seriesId = seriesId,
+                seasonId = seasonId?.takeIf { it.isNotBlank() },
+                userId = conn.userId
+            )
+            if (res.isSuccessful && res.body() != null && res.body()!!.items.isNotEmpty()) {
                 res.body()!!.items
             } else {
-                emptyList()
+                // Secondary check: query via getItems with ParentId = seriesId and IncludeItemTypes = "Episode"
+                val itemsRes = activeApi!!.getItems(
+                    userId = conn.userId,
+                    parentId = seriesId,
+                    includeItemTypes = "Episode",
+                    sortBy = "SortName",
+                    sortOrder = "Ascending",
+                    recursive = true
+                )
+                if (itemsRes.isSuccessful && itemsRes.body() != null && itemsRes.body()!!.items.isNotEmpty()) {
+                    itemsRes.body()!!.items
+                } else {
+                    res.body()?.items ?: emptyList()
+                }
             }
         } catch (e: Exception) {
-            Log.w("EmbyRepository", "Error fetching episodes", e)
+            Log.w("EmbyRepository", "Error fetching episodes, trying fallback", e)
+            try {
+                val fallbackRes = activeApi!!.getItems(
+                    userId = conn.userId,
+                    parentId = seriesId,
+                    includeItemTypes = "Episode",
+                    sortBy = "SortName",
+                    sortOrder = "Ascending",
+                    recursive = true
+                )
+                if (fallbackRes.isSuccessful && fallbackRes.body() != null) {
+                    return@withContext fallbackRes.body()!!.items
+                }
+            } catch (fallbackError: Exception) {
+                Log.w("EmbyRepository", "Fallback getItems also failed", fallbackError)
+            }
             emptyList()
         }
     }
@@ -362,6 +477,43 @@ class EmbyRepository(
         } catch (e: Exception) {
             Log.w("EmbyRepository", "Error fetching similar items", e)
             emptyList()
+        }
+    }
+
+    suspend fun getCollectionItems(collectionId: String): List<EmbyItemDto> = withContext(Dispatchers.IO) {
+        val conn = preferences.getConnection()
+        if (conn == null || conn.isDemo || activeApi == null || collectionId.startsWith("boxset_")) {
+            return@withContext DemoDataProvider.getCollectionItems(collectionId)
+        }
+        try {
+            val res = activeApi!!.getItems(
+                userId = conn.userId,
+                parentId = collectionId,
+                sortBy = "SortName",
+                sortOrder = "Ascending",
+                recursive = true,
+                limit = 100
+            )
+            if (res.isSuccessful && res.body() != null && res.body()!!.items.isNotEmpty()) {
+                res.body()!!.items
+            } else {
+                val fallbackRes = activeApi!!.getItems(
+                    userId = conn.userId,
+                    parentId = collectionId,
+                    sortBy = "SortName",
+                    sortOrder = "Ascending",
+                    recursive = false,
+                    limit = 100
+                )
+                if (fallbackRes.isSuccessful && fallbackRes.body() != null && fallbackRes.body()!!.items.isNotEmpty()) {
+                    fallbackRes.body()!!.items
+                } else {
+                    DemoDataProvider.getCollectionItems(collectionId)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("EmbyRepository", "Error fetching collection items", e)
+            DemoDataProvider.getCollectionItems(collectionId)
         }
     }
 
@@ -439,9 +591,29 @@ class EmbyRepository(
         } else {
             val bitrate = quality.maxBitrate ?: 4_000_000L
             val channels = preferences.audioChannels
-            val hwAccel = if (preferences.hardwareAcceleration) "&HardwareEncoding=true&AllowVideoStreamCopy=true" else ""
-            "$baseUrl/Videos/$itemId/master.m3u8?MediaSourceId=$sourceId&VideoCodec=h264&AudioCodec=aac&AudioChannels=$channels&MaxStreamingBitrate=$bitrate&VideoBitrate=$bitrate&TranscodingMaxAudioChannels=$channels&EnableSubtitlesInManifest=true$hwAccel&api_key=$token"
+            val playSessionId = UUID.randomUUID().toString().replace("-", "")
+            // Enforce H.264 video transcode without video stream copy so codecs unsupported by the device/emulator (such as HEVC) are re-encoded to universal H.264
+            "$baseUrl/Videos/$itemId/master.m3u8?MediaSourceId=$sourceId&VideoCodec=h264&AudioCodec=aac&AudioChannels=$channels&MaxStreamingBitrate=$bitrate&VideoBitrate=$bitrate&TranscodingMaxAudioChannels=$channels&EnableSubtitlesInManifest=true&PlaySessionId=$playSessionId&api_key=$token"
         }
+    }
+
+    fun buildProgressiveTranscodeUrl(
+        itemId: String,
+        mediaSourceId: String? = null,
+        quality: PlaybackQuality = PlaybackQuality.P1080
+    ): String {
+        val conn = preferences.getConnection()
+        if (conn == null || conn.isDemo) {
+            return DemoDataProvider.getStreamUrl(itemId)
+        }
+
+        val baseUrl = conn.url.trimEnd('/')
+        val token = conn.token
+        val sourceId = mediaSourceId ?: itemId
+        val bitrate = quality.maxBitrate ?: 4_000_000L
+        val channels = preferences.audioChannels
+        val playSessionId = UUID.randomUUID().toString().replace("-", "")
+        return "$baseUrl/Videos/$itemId/stream.mp4?static=false&MediaSourceId=$sourceId&VideoCodec=h264&AudioCodec=aac&AudioChannels=$channels&MaxStreamingBitrate=$bitrate&VideoBitrate=$bitrate&PlaySessionId=$playSessionId&api_key=$token"
     }
 
     fun buildSubtitleUrl(itemId: String, mediaSourceId: String?, index: Int, format: String = "vtt"): String? {

@@ -2,7 +2,6 @@ package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,12 +21,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -35,12 +32,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -56,18 +52,20 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentEmerald
-import com.example.ui.theme.CinemaBlack
-import com.example.ui.theme.CinemaCardBorder
-import com.example.ui.theme.CinemaDarkSurface
-import com.example.ui.theme.CinemaSurfaceVariant
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.AppAccent
+import com.example.ui.theme.AppBackground
+import com.example.ui.theme.AppElevatedSurface
+import com.example.ui.theme.AppLiveRed
+import com.example.ui.theme.AppRadii
+import com.example.ui.theme.AppSelectedSurface
+import com.example.ui.theme.AppSpacing
+import com.example.ui.theme.AppSurface
+import com.example.ui.theme.AppTextPrimary
+import com.example.ui.theme.AppTextSecondary
+import com.example.ui.theme.AppTextTertiary
+import com.example.ui.theme.AppTypography
 import com.example.ui.viewmodel.EmbyViewModel
 
 @Composable
@@ -75,332 +73,236 @@ fun ServerSetupScreen(
     viewModel: EmbyViewModel,
     onConnected: () -> Unit
 ) {
-    var serverUrl by remember { mutableStateOf("http://192.168.1.100:8096") }
+    var serverUrl by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    val homeState = viewModel.homeState
+    val homeState by viewModel.homeState.collectAsState()
+    val isPrivateIp = remember(serverUrl) {
+        val s = serverUrl.trim()
+        s.contains("192.168.") || s.contains("10.") || s.contains("172.16.") || s.contains("localhost") || s.contains("127.0.0.1")
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(AppBackground)
     ) {
-        // Subtle ambient background gradient
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF003840).copy(alpha = 0.35f),
-                            CinemaBlack,
-                            CinemaBlack
-                        )
-                    )
-                )
-        )
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+                .padding(AppSpacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(AppSpacing.xl))
 
-            // Brand Logo & Heading
+            // Brand Icon & Title
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(AccentCyan, AccentEmerald)
-                        )
-                    ),
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(AppRadii.hero))
+                    .background(AppElevatedSurface),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.PlayCircle,
-                    contentDescription = "EmbyStream Logo",
-                    tint = CinemaBlack,
-                    modifier = Modifier.size(52.dp)
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = AppAccent,
+                    modifier = Modifier.size(32.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(AppSpacing.md))
 
             Text(
-                text = "EmbyStream",
-                color = TextPrimary,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 0.5.sp
+                text = "Emby",
+                style = AppTypography.heroTitle
             )
 
             Text(
-                text = "Native Android Player & Transcoder",
-                color = AccentCyan,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                text = "Connect to your media server",
+                style = AppTypography.metadata
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(AppSpacing.xl))
 
-            Text(
-                text = "Direct Play, hardware transcoding, subtitle selection, and offline sync without Emby Premiere.",
-                color = TextSecondary,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // Setup Card
+            // Setup Form Card
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, CinemaCardBorder, RoundedCornerShape(20.dp)),
-                shape = RoundedCornerShape(20.dp),
-                color = CinemaDarkSurface
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(AppRadii.card),
+                color = AppElevatedSurface
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(AppSpacing.lg)) {
                     Text(
-                        text = "Connect to your Emby Server",
-                        color = TextPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "Server Connection",
+                        style = AppTypography.cardTitle
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Enter your server's IP address or domain (HTTP or HTTPS)",
-                        color = TextMuted,
-                        fontSize = 12.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(AppSpacing.sm))
 
                     OutlinedTextField(
                         value = serverUrl,
                         onValueChange = { serverUrl = it },
-                        label = { Text("Server URL & Port") },
-                        placeholder = { Text("http://192.168.1.100:8096") },
+                        label = { Text("Server URL", fontSize = 13.sp) },
+                        placeholder = { Text("http://emby.example.com:8096", fontSize = 13.sp) },
                         leadingIcon = {
-                            Icon(Icons.Default.Dns, contentDescription = "Server URL", tint = AccentCyan)
+                            Icon(Icons.Default.Dns, contentDescription = null, tint = AppTextSecondary, modifier = Modifier.size(18.dp))
                         },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("server_url_input"),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AccentCyan,
-                            unfocusedBorderColor = CinemaCardBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = CinemaSurfaceVariant,
-                            unfocusedContainerColor = CinemaSurfaceVariant
+                            focusedBorderColor = AppAccent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = AppTextPrimary,
+                            unfocusedTextColor = AppTextPrimary,
+                            focusedContainerColor = AppSurface,
+                            unfocusedContainerColor = AppSurface
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(AppRadii.button),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next)
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    if (isPrivateIp) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Cloud emulator cannot reach private local LAN IPs directly. Tap 'Explore Demo Server' below to test immediately, or connect via a public domain / port forward.",
+                            style = AppTypography.minorLabel,
+                            color = AppAccent
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(AppSpacing.sm))
 
                     OutlinedTextField(
                         value = username,
                         onValueChange = { username = it },
-                        label = { Text("Username") },
-                        placeholder = { Text("admin / your username") },
+                        label = { Text("Username", fontSize = 13.sp) },
                         leadingIcon = {
-                            Icon(Icons.Default.Person, contentDescription = "Username", tint = AccentCyan)
+                            Icon(Icons.Default.Person, contentDescription = null, tint = AppTextSecondary, modifier = Modifier.size(18.dp))
                         },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("username_input"),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AccentCyan,
-                            unfocusedBorderColor = CinemaCardBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = CinemaSurfaceVariant,
-                            unfocusedContainerColor = CinemaSurfaceVariant
+                            focusedBorderColor = AppAccent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = AppTextPrimary,
+                            unfocusedTextColor = AppTextPrimary,
+                            focusedContainerColor = AppSurface,
+                            unfocusedContainerColor = AppSurface
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(AppRadii.button),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(AppSpacing.sm))
 
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Password (optional if none)") },
+                        label = { Text("Password", fontSize = 13.sp) },
                         leadingIcon = {
-                            Icon(Icons.Default.Lock, contentDescription = "Password", tint = AccentCyan)
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = AppTextSecondary, modifier = Modifier.size(18.dp))
                         },
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = "Toggle password",
-                                    tint = TextSecondary
+                                    contentDescription = null,
+                                    tint = AppTextTertiary,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         },
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                if (serverUrl.isNotBlank() && username.isNotBlank()) {
-                                    viewModel.connectServer(serverUrl, username, password, onConnected)
-                                }
-                            }
-                        ),
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("password_input"),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AccentCyan,
-                            unfocusedBorderColor = CinemaCardBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = CinemaSurfaceVariant,
-                            unfocusedContainerColor = CinemaSurfaceVariant
+                            focusedBorderColor = AppAccent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedTextColor = AppTextPrimary,
+                            unfocusedTextColor = AppTextPrimary,
+                            focusedContainerColor = AppSurface,
+                            unfocusedContainerColor = AppSurface
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(AppRadii.button),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                viewModel.connectToServer(serverUrl, username, password, onConnected)
+                            }
+                        )
                     )
 
-                    // Error display
-                    AnimatedVisibility(visible = homeState.value.errorMessage != null) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF3E1212)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = "Error",
-                                    tint = Color(0xFFFF5252),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = homeState.value.errorMessage ?: "",
-                                    color = Color(0xFFFF8A80),
-                                    fontSize = 12.sp
-                                )
-                            }
+                    if (homeState.errorMessage != null) {
+                        Spacer(modifier = Modifier.height(AppSpacing.xs))
+                        Text(
+                            text = homeState.errorMessage!!,
+                            style = AppTypography.metadata,
+                            color = AppLiveRed
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(AppSpacing.lg))
+
+                    // Connect Action
+                    Button(
+                        onClick = {
+                            viewModel.connectToServer(serverUrl, username, password, onConnected)
+                        },
+                        enabled = !homeState.isLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .testTag("connect_server_button"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AppAccent,
+                            contentColor = Color(0xFF04191C)
+                        ),
+                        shape = RoundedCornerShape(AppRadii.button)
+                    ) {
+                        if (homeState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color(0xFF04191C),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Connect", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(AppSpacing.xs))
 
+                    // Demo Mode Action
                     Button(
                         onClick = {
-                            if (serverUrl.isNotBlank() && username.isNotBlank()) {
-                                viewModel.connectServer(serverUrl, username, password, onConnected)
-                            }
+                            viewModel.loadDemoMode(onConnected)
                         },
-                        enabled = serverUrl.isNotBlank() && username.isNotBlank() && !homeState.value.isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp)
-                            .testTag("connect_button"),
+                            .height(44.dp)
+                            .testTag("demo_mode_button"),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = AccentCyan,
-                            contentColor = CinemaBlack
+                            containerColor = AppSelectedSurface,
+                            contentColor = AppTextPrimary
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(AppRadii.button)
                     ) {
-                        if (homeState.value.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = CinemaBlack
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Connecting...")
-                        } else {
-                            Text(
-                                text = "Connect to My Server",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            )
-                        }
+                        Text("Explore Demo Server (Preloaded)", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Quick Demo Server option
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(modifier = Modifier.weight(1f).height(1.dp).background(CinemaCardBorder))
-                Text(
-                    text = " OR ",
-                    color = TextMuted,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-                Box(modifier = Modifier.weight(1f).height(1.dp).background(CinemaCardBorder))
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            OutlinedButton(
-                onClick = {
-                    viewModel.connectDemoServer(onConnected)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .testTag("demo_server_button"),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = AccentEmerald
-                ),
-                border = ButtonDefaults.outlinedButtonBorder.copy(
-                    brush = Brush.horizontalGradient(listOf(AccentEmerald, AccentCyan))
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Demo Mode",
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Try Demo Cinema Server (Instant Test)",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Preloaded with HD movies & TV episodes so you can test direct playback, hardware transcoding, and offline synchronization immediately.",
-                color = TextMuted,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(AppSpacing.xxl))
         }
     }
 }

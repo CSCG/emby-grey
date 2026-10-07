@@ -154,7 +154,7 @@ fun PlayerScreen(
     var showToonamiServerSheet by remember { mutableStateOf(false) }
 
     // Immersive fullscreen setup
-    DisposableEffect(Unit) {
+    DisposableEffect(item.id, localFilePath, initialQuality, startFromBeginning) {
         val window = context.findActivity()?.window
         if (window != null) {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)

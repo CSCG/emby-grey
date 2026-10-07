@@ -23,13 +23,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -45,20 +42,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.repository.DemoDataProvider
 import com.example.ui.components.MediaPosterCard
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.CinemaBlack
-import com.example.ui.theme.CinemaCardBorder
-import com.example.ui.theme.CinemaDarkSurface
-import com.example.ui.theme.CinemaSurfaceVariant
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.AppAccent
+import com.example.ui.theme.AppBackground
+import com.example.ui.theme.AppElevatedSurface
+import com.example.ui.theme.AppRadii
+import com.example.ui.theme.AppSpacing
+import com.example.ui.theme.AppSurface
+import com.example.ui.theme.AppTextPrimary
+import com.example.ui.theme.AppTextSecondary
+import com.example.ui.theme.AppTextTertiary
+import com.example.ui.theme.AppTypography
 import com.example.ui.viewmodel.EmbyViewModel
 
 @Composable
@@ -96,14 +94,14 @@ fun LibraryDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(AppBackground)
             .statusBarsPadding()
     ) {
-        // Top Navigation Bar
+        // Navigation Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = AppSpacing.xs, vertical = AppSpacing.xs),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
@@ -113,14 +111,12 @@ fun LibraryDetailScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = TextPrimary
+                    tint = AppTextPrimary
                 )
             }
             Text(
                 text = libraryName,
-                color = TextPrimary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
+                style = AppTypography.sectionTitle,
                 modifier = Modifier.weight(1f)
             )
 
@@ -129,32 +125,35 @@ fun LibraryDetailScreen(
                 IconButton(onClick = { sortMenuExpanded = true }) {
                     Icon(
                         imageVector = Icons.Default.FilterList,
-                        contentDescription = "Sort Options",
-                        tint = AccentCyan
+                        contentDescription = "Sort",
+                        tint = AppTextSecondary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
                 DropdownMenu(
                     expanded = sortMenuExpanded,
                     onDismissRequest = { sortMenuExpanded = false },
-                    modifier = Modifier.background(CinemaDarkSurface)
+                    modifier = Modifier
+                        .background(AppElevatedSurface)
+                        .clip(RoundedCornerShape(AppRadii.card))
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Name (A to Z)", color = TextPrimary) },
+                        text = { Text("Title (A-Z)", color = AppTextPrimary, fontSize = 14.sp) },
                         onClick = {
                             selectedSort = "SortName"
                             sortMenuExpanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Release Year", color = TextPrimary) },
+                        text = { Text("Release Year", color = AppTextPrimary, fontSize = 14.sp) },
                         onClick = {
                             selectedSort = "ProductionYear"
                             sortMenuExpanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Community Rating", color = TextPrimary) },
+                        text = { Text("Rating", color = AppTextPrimary, fontSize = 14.sp) },
                         onClick = {
                             selectedSort = "CommunityRating"
                             sortMenuExpanded = false
@@ -164,101 +163,81 @@ fun LibraryDetailScreen(
             }
         }
 
-        // Search Bar in Library
+        // Search Input (Restrained, subtle)
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("Search in $libraryName...", color = TextMuted) },
+            placeholder = { Text("Search $libraryName...", color = AppTextTertiary, fontSize = 14.sp) },
             leadingIcon = {
-                Icon(Icons.Default.Search, contentDescription = "Search", tint = AccentCyan)
+                Icon(Icons.Default.Search, contentDescription = null, tint = AppTextSecondary, modifier = Modifier.size(18.dp))
             },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
                     IconButton(onClick = { searchQuery = "" }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = TextSecondary)
+                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = AppTextSecondary, modifier = Modifier.size(18.dp))
                     }
                 }
             },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .padding(horizontal = AppSpacing.md, vertical = AppSpacing.xs)
                 .testTag("library_search_input"),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AccentCyan,
-                unfocusedBorderColor = CinemaCardBorder,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-                focusedContainerColor = CinemaSurfaceVariant,
-                unfocusedContainerColor = CinemaSurfaceVariant
+                focusedBorderColor = AppAccent.copy(alpha = 0.5f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedTextColor = AppTextPrimary,
+                unfocusedTextColor = AppTextPrimary,
+                focusedContainerColor = AppElevatedSurface,
+                unfocusedContainerColor = AppElevatedSurface
             ),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(AppRadii.card)
         )
 
-        // Count header
+        // Item count
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(horizontal = AppSpacing.md, vertical = AppSpacing.xxs),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "${filteredItems.size} items",
-                color = TextSecondary,
-                fontSize = 12.sp
-            )
-            Text(
-                text = "Sorted by: $selectedSort",
-                color = TextMuted,
-                fontSize = 11.sp
+                style = AppTypography.metadata
             )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(AppSpacing.xxs))
 
-        // Grid of Media Posters
-        if (isLoading) {
+        // Grid of 2:3 Media Posters
+        if (isLoading && libraryItems.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 80.dp),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = AccentCyan)
-            }
-        } else if (filteredItems.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.Movie,
-                        contentDescription = "No items",
-                        tint = TextMuted,
-                        modifier = Modifier.size(54.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = if (searchQuery.isNotBlank()) "No items matching \"$searchQuery\"" else "Library is empty",
-                        color = TextSecondary,
-                        fontSize = 14.sp
-                    )
-                }
+                CircularProgressIndicator(
+                    color = AppAccent,
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
             }
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 130.dp),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                columns = GridCells.Adaptive(minSize = 115.dp),
+                contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.md, bottom = 100.dp),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(filteredItems) { item ->
+                items(filteredItems, key = { it.id }) { item ->
                     MediaPosterCard(
                         item = item,
                         imageUrl = viewModel.getImageUrl(item, isBackdrop = false),
                         onClick = { onNavigateToItem(item.id) },
-                        modifier = Modifier.fillMaxWidth()
+                        aspectRatio = 2f / 3f
                     )
                 }
             }

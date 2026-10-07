@@ -3,12 +3,14 @@ package com.example.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,29 +24,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cast
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,24 +58,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.data.model.EmbyItemDto
-import com.example.data.repository.DemoDataProvider
 import com.example.ui.components.LibraryCard
+import com.example.ui.components.LiveChannelCard
 import com.example.ui.components.MediaPosterCard
 import com.example.ui.components.SectionHeader
-import com.example.ui.theme.AccentAmber
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentEmerald
-import com.example.ui.theme.AccentPurple
-import com.example.ui.theme.CinemaBlack
-import com.example.ui.theme.CinemaDarkSurface
-import com.example.ui.theme.CinemaSurfaceVariant
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.AppAccent
+import com.example.ui.theme.AppBackground
+import com.example.ui.theme.AppElevatedSurface
+import com.example.ui.theme.AppLiveRed
+import com.example.ui.theme.AppRadii
+import com.example.ui.theme.AppSelectedSurface
+import com.example.ui.theme.AppSpacing
+import com.example.ui.theme.AppSurface
+import com.example.ui.theme.AppTextPrimary
+import com.example.ui.theme.AppTextSecondary
+import com.example.ui.theme.AppTextTertiary
+import com.example.ui.theme.AppTypography
 import com.example.ui.viewmodel.EmbyViewModel
 
 @Composable
@@ -91,123 +93,132 @@ fun HomeScreen(
     val homeState by viewModel.homeState.collectAsState()
     val liveTvChannels by viewModel.liveTvChannels.collectAsState()
     val conn = homeState.connection
+    var showServerMenu by remember { mutableStateOf(false) }
 
     val heroItem = homeState.latestItems.firstOrNull { it.type == "Movie" }
         ?: homeState.latestItems.firstOrNull()
+        ?: homeState.continueWatching.firstOrNull()
+
+    // Toonami Aftermath featured channel
+    val toonamiChannel = liveTvChannels.firstOrNull { it.id == "free_toonami_aftermath" }
+
+    // Group items for Movies and Shows carousels
+    val movieItems = remember(homeState.latestItems) {
+        homeState.latestItems.filter { it.type.equals("Movie", ignoreCase = true) }
+    }
+    val showItems = remember(homeState.latestItems) {
+        homeState.latestItems.filter { it.type.equals("Series", ignoreCase = true) }
+    }
+    val resumePlaybackItems = remember(homeState.continueWatching) {
+        homeState.continueWatching.take(5)
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(AppBackground)
             .testTag("home_screen_content"),
-        contentPadding = PaddingValues(bottom = 100.dp)
+        contentPadding = PaddingValues(bottom = 120.dp)
     ) {
-        // Top Header Bar
+        // 1. Simplified Application Header
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { onNavigateToSettings() }
-                ) {
-                    Box(
+                // Server name dropdown selector (quiet, content-forward)
+                Box {
+                    Row(
                         modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Brush.linearGradient(listOf(AccentCyan, AccentEmerald))),
-                        contentAlignment = Alignment.Center
+                            .clip(RoundedCornerShape(AppRadii.badge))
+                            .clickable { showServerMenu = true }
+                            .padding(horizontal = AppSpacing.xs, vertical = AppSpacing.xxs),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Text(
+                            text = conn?.serverName ?: "Emby",
+                            style = AppTypography.sectionTitle,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Icon(
-                            imageVector = Icons.Default.Dns,
-                            contentDescription = "Server",
-                            tint = CinemaBlack,
-                            modifier = Modifier.size(20.dp)
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Server Menu",
+                            tint = AppTextSecondary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = conn?.serverName ?: "EmbyStream",
-                                color = TextPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (conn?.isDemo == true) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = AccentEmerald.copy(alpha = 0.2f)
-                                ) {
+
+                    DropdownMenu(
+                        expanded = showServerMenu,
+                        onDismissRequest = { showServerMenu = false },
+                        modifier = Modifier
+                            .background(AppElevatedSurface)
+                            .clip(RoundedCornerShape(AppRadii.card))
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Column {
                                     Text(
-                                        text = "DEMO",
-                                        color = AccentEmerald,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                        text = conn?.serverName ?: "Emby Server",
+                                        color = AppTextPrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (conn?.isDemo == true) "Demo Mode Active" else (conn?.username ?: "Connected"),
+                                        color = AppTextSecondary,
+                                        fontSize = 12.sp
                                     )
                                 }
+                            },
+                            onClick = {
+                                showServerMenu = false
+                                onNavigateToSettings()
                             }
-                        }
-                        Text(
-                            text = if (conn?.isDemo == true) "Open Media Server" else (conn?.username ?: "Not connected"),
-                            color = TextSecondary,
-                            fontSize = 12.sp
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Server Settings", color = AppTextPrimary, fontSize = 14.sp) },
+                            onClick = {
+                                showServerMenu = false
+                                onNavigateToSettings()
+                            }
                         )
                     }
                 }
 
+                // Header actions: Search & Settings
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = onNavigateToLiveTv,
-                        modifier = Modifier.testTag("live_tv_header_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LiveTv,
-                            contentDescription = "Live TV",
-                            tint = Color(0xFFE50914)
-                        )
-                    }
                     IconButton(
                         onClick = onNavigateToSearch,
                         modifier = Modifier.testTag("search_icon_button")
                     ) {
-                        Icon(Icons.Default.Search, contentDescription = "Search", tint = TextPrimary)
-                    }
-                    IconButton(
-                        onClick = onNavigateToDownloads,
-                        modifier = Modifier.testTag("downloads_icon_button")
-                    ) {
-                        Icon(Icons.Default.CloudDownload, contentDescription = "Downloads", tint = TextPrimary)
-                    }
-                    IconButton(
-                        onClick = onNavigateToSettings,
-                        modifier = Modifier.testTag("settings_icon_button")
-                    ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextPrimary)
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = AppTextPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
             }
         }
 
-        // Hero Spotlight Banner
+        // 2. Large Cinematic Featured Hero
         if (heroItem != null) {
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(300.dp)
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(CinemaSurfaceVariant)
+                        .height(390.dp)
+                        .padding(horizontal = AppSpacing.md)
+                        .clip(RoundedCornerShape(AppRadii.hero))
+                        .background(AppElevatedSurface)
                 ) {
                     val heroContext = LocalContext.current
                     SubcomposeAsyncImage(
@@ -219,41 +230,23 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         loading = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(CinemaDarkSurface),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(32.dp),
-                                    color = AccentCyan.copy(alpha = 0.5f),
-                                    strokeWidth = 2.dp
-                                )
-                            }
+                            Box(modifier = Modifier.fillMaxSize().background(AppElevatedSurface))
                         },
                         error = {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(CinemaSurfaceVariant, CinemaDarkSurface)
-                                        )
-                                    ),
+                                modifier = Modifier.fillMaxSize().background(AppElevatedSurface),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Movie,
-                                    contentDescription = null,
-                                    tint = TextMuted.copy(alpha = 0.35f),
-                                    modifier = Modifier.size(72.dp)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = AppTextTertiary,
+                                    strokeWidth = 2.dp
                                 )
                             }
                         }
                     )
 
-                    // Scrim gradient
+                    // Functional dark vertical gradient over lower portion
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -261,289 +254,426 @@ fun HomeScreen(
                                 Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        CinemaBlack.copy(alpha = 0.4f),
-                                        CinemaBlack.copy(alpha = 0.95f)
+                                        Color.Transparent,
+                                        AppBackground.copy(alpha = 0.7f),
+                                        AppBackground.copy(alpha = 0.98f)
                                     ),
-                                    startY = 50f
+                                    startY = 0f
                                 )
                             )
                     )
 
-                    // Hero Content
+                    // Content info & actions at bottom
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(16.dp)
+                            .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.lg)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = AccentCyan.copy(alpha = 0.25f)
-                        ) {
-                            Text(
-                                text = "FEATURED SPOTLIGHT",
-                                color = AccentCyan,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
                         Text(
                             text = heroItem.name,
-                            color = TextPrimary,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            style = AppTypography.heroTitle,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(AppSpacing.xxs))
+
+                        // Metadata line: 2008 • 9 min • Animation
+                        val year = heroItem.productionYear?.toString()
+                        val duration = if (heroItem.durationMinutes > 0) "${heroItem.durationMinutes} min" else null
+                        val genre = heroItem.genres?.firstOrNull() ?: (if (heroItem.type == "Series") "TV Series" else "Movie")
+                        val metaParts = listOfNotNull(year, duration, genre).joinToString(" • ")
 
                         Text(
-                            text = heroItem.overview ?: "Stream directly or transcode in high definition.",
-                            color = TextSecondary,
-                            fontSize = 12.sp,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(end = 40.dp)
+                            text = metaParts,
+                            style = AppTypography.metadata,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        if (!heroItem.overview.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(AppSpacing.xs))
+                            Text(
+                                text = heroItem.overview,
+                                style = AppTypography.body,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(end = AppSpacing.xl)
+                            )
+                        }
 
+                        Spacer(modifier = Modifier.height(AppSpacing.md))
+
+                        // Actions: [▶ Play] and transparent [ⓘ Info]
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Button(
                                 onClick = { onNavigateToPlayer(heroItem.id) },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = AccentCyan,
-                                    contentColor = CinemaBlack
+                                    containerColor = AppAccent,
+                                    contentColor = Color(0xFF04191C)
                                 ),
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(AppRadii.button),
                                 modifier = Modifier
-                                    .height(40.dp)
+                                    .height(42.dp)
                                     .testTag("hero_play_button")
                             ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = "Play", modifier = Modifier.size(18.dp))
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Play Direct", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(
+                                    text = "Play",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
 
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(AppSpacing.sm))
 
-                            OutlinedButton(
+                            TextButton(
                                 onClick = { onNavigateToItem(heroItem.id) },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.height(40.dp)
+                                colors = ButtonDefaults.textButtonColors(contentColor = AppTextPrimary),
+                                shape = RoundedCornerShape(AppRadii.button),
+                                modifier = Modifier.height(42.dp)
                             ) {
-                                Icon(Icons.Default.Info, contentDescription = "Details", modifier = Modifier.size(16.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = AppTextSecondary
+                                )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Details", fontSize = 13.sp)
+                                Text(
+                                    text = "Info",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
             }
         }
 
-        // Continue Watching Section
-        if (homeState.continueWatching.isNotEmpty()) {
+        // 3. Resume Playback (for five items / series / movies on the home screen)
+        if (resumePlaybackItems.isNotEmpty()) {
             item {
                 SectionHeader(
-                    title = "Continue Watching",
-                    subtitle = "Resume where you left off"
+                    title = "Resume Playback",
+                    subtitle = "Pick up where you left off",
+                    modifier = Modifier.testTag("section_resume_playback")
                 )
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
                 ) {
-                    items(homeState.continueWatching) { item ->
+                    items(resumePlaybackItems) { item ->
                         MediaPosterCard(
                             item = item,
                             imageUrl = viewModel.getImageUrl(item, isBackdrop = true),
                             onClick = { onNavigateToPlayer(item.id) },
-                            modifier = Modifier.width(200.dp),
+                            modifier = Modifier
+                                .width(200.dp)
+                                .testTag("resume_item_${item.id}"),
+                            aspectRatio = 16f / 9f,
+                            showRemainingTime = true
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
+            }
+        }
+
+        // 4. Live Now (horizontal 16:9 carousel)
+        if (liveTvChannels.isNotEmpty()) {
+            item {
+                SectionHeader(
+                    title = "Live TV",
+                    actionText = "Guide",
+                    onActionClick = onNavigateToLiveTv
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
+                LazyRow(
+                    contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                ) {
+                    items(liveTvChannels.take(10)) { channel ->
+                        LiveChannelCard(
+                            channel = channel,
+                            onClick = {
+                                val itemDto = viewModel.buildLiveTvItemDto(channel)
+                                onNavigateToPlayer(itemDto.id)
+                            },
+                            modifier = Modifier.width(200.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
+            }
+        }
+
+        // 5. Recently Added (poster carousel 2:3)
+        if (homeState.latestItems.isNotEmpty()) {
+            item {
+                SectionHeader(
+                    title = "Recently Added"
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
+                LazyRow(
+                    contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                ) {
+                    items(homeState.latestItems.take(12)) { item ->
+                        MediaPosterCard(
+                            item = item,
+                            imageUrl = viewModel.getImageUrl(item, isBackdrop = false),
+                            onClick = { onNavigateToItem(item.id) },
+                            modifier = Modifier.width(135.dp),
+                            aspectRatio = 2f / 3f
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
+            }
+        }
+
+        // 6. Movies (if available, poster carousel)
+        if (movieItems.isNotEmpty()) {
+            item {
+                SectionHeader(
+                    title = "Movies"
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
+                LazyRow(
+                    contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                ) {
+                    items(movieItems) { item ->
+                        MediaPosterCard(
+                            item = item,
+                            imageUrl = viewModel.getImageUrl(item, isBackdrop = false),
+                            onClick = { onNavigateToItem(item.id) },
+                            modifier = Modifier.width(135.dp),
+                            aspectRatio = 2f / 3f
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
+            }
+        }
+
+        // 7. TV Shows (if available, poster carousel)
+        if (showItems.isNotEmpty()) {
+            item {
+                SectionHeader(
+                    title = "Shows"
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
+                LazyRow(
+                    contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                ) {
+                    items(showItems) { item ->
+                        MediaPosterCard(
+                            item = item,
+                            imageUrl = viewModel.getImageUrl(item, isBackdrop = false),
+                            onClick = { onNavigateToItem(item.id) },
+                            modifier = Modifier.width(135.dp),
+                            aspectRatio = 2f / 3f
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
+            }
+        }
+
+        // 8. Toonami Aftermath Editorial Treatment Section
+        if (toonamiChannel != null) {
+            item {
+                SectionHeader(
+                    title = "Toonami Aftermath",
+                    actionText = "Watch Live",
+                    onActionClick = {
+                        val itemDto = viewModel.buildLiveTvItemDto(toonamiChannel)
+                        onNavigateToPlayer(itemDto.id)
+                    }
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(horizontal = AppSpacing.md)
+                        .clip(RoundedCornerShape(AppRadii.card))
+                        .background(AppElevatedSurface)
+                        .clickable {
+                            val itemDto = viewModel.buildLiveTvItemDto(toonamiChannel)
+                            onNavigateToPlayer(itemDto.id)
+                        }
+                        .testTag("toonami_editorial_banner")
+                ) {
+                    val context = LocalContext.current
+                    SubcomposeAsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data("https://i.imgur.com/aSjhZK7.png")
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Toonami Aftermath",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        error = {
+                            Box(modifier = Modifier.fillMaxSize().background(Color(0xFF141923)))
+                        }
+                    )
+
+                    // Dark gradient scrim
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        AppBackground.copy(alpha = 0.95f),
+                                        AppBackground.copy(alpha = 0.75f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+
+                    // Editorial program content
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(AppSpacing.lg),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(AppLiveRed)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "LIVE NOW",
+                                color = AppTextSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.sp
+                            )
+                        }
+
+                        Column {
+                            Text(
+                                text = toonamiChannel.currentProgram?.name ?: "Toonami Broadcast Block",
+                                style = AppTypography.sectionTitle,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            val programTime = toonamiChannel.currentProgram?.formattedTime ?: "24/7 Retro Animation"
+                            Text(
+                                text = programTime,
+                                style = AppTypography.metadata,
+                                color = AppAccent
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = AppAccent,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Watch Live",
+                                color = AppAccent,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
+            }
+        }
+
+        // 9. Collections Section
+        if (homeState.collections.isNotEmpty()) {
+            item {
+                SectionHeader(
+                    title = "Collections",
+                    subtitle = "Curated sagas & film franchises"
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
+                LazyRow(
+                    contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                ) {
+                    items(homeState.collections) { collection ->
+                        MediaPosterCard(
+                            item = collection,
+                            imageUrl = viewModel.getImageUrl(collection, isBackdrop = true),
+                            onClick = { onNavigateToItem(collection.id) },
+                            modifier = Modifier
+                                .width(220.dp)
+                                .testTag("collection_${collection.id}"),
                             aspectRatio = 16f / 9f
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
             }
         }
 
-        // Live TV Channels Section
-        if (liveTvChannels.isNotEmpty()) {
-            item {
-                SectionHeader(
-                    title = "Live TV & Streaming Channels",
-                    subtitle = "24/7 Free FAST and tuner broadcasts",
-                    actionText = "View Guide",
-                    onActionClick = onNavigateToLiveTv
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(liveTvChannels.take(12)) { channel ->
-                        val isTraffic = channel.isTrafficCam
-                        val (tagText, tagColor) = when {
-                            channel.isTrafficCam -> "DOT CAM" to AccentAmber
-                            channel.category == "Classic Cartoons" -> "TOONS" to AccentCyan
-                            channel.category == "Anime" -> "ANIME" to AccentPurple
-                            channel.isOnlineFast -> "FAST" to AccentEmerald
-                            else -> "TUNER" to AccentPurple
-                        }
-
-                        Surface(
-                            modifier = Modifier
-                                .width(225.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable {
-                                    val itemDto = viewModel.buildLiveTvItemDto(channel)
-                                    onNavigateToPlayer(itemDto.id)
-                                }
-                                .testTag("home_live_channel_${channel.id}"),
-                            shape = RoundedCornerShape(12.dp),
-                            color = CinemaDarkSurface
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(6.dp)
-                                                .clip(CircleShape)
-                                                .background(if (isTraffic) AccentAmber else Color(0xFFE50914))
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = if (isTraffic) "CAM" else "LIVE",
-                                            color = if (isTraffic) AccentAmber else Color(0xFFE50914),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                    }
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = tagColor.copy(alpha = 0.2f)
-                                    ) {
-                                        Text(
-                                            text = tagText,
-                                            color = tagColor,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = channel.name,
-                                    color = TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-
-                                Text(
-                                    text = channel.currentProgram?.name ?: "Continuous Live Broadcast",
-                                    color = TextSecondary,
-                                    fontSize = 11.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = if (isTraffic) Icons.Default.Videocam else Icons.Default.PlayArrow,
-                                        contentDescription = null,
-                                        tint = if (isTraffic) AccentAmber else AccentCyan,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = if (isTraffic) "View Cam" else "Watch Now",
-                                        color = if (isTraffic) AccentAmber else AccentCyan,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-
-        // Media Libraries Section
+        // 10. Media Libraries Section
         if (homeState.libraries.isNotEmpty()) {
             item {
                 SectionHeader(
-                    title = "Media Libraries",
-                    subtitle = "Browse your organized collection"
+                    title = "Libraries"
                 )
+                Spacer(modifier = Modifier.height(AppSpacing.headerToContentSpacing))
+
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
                 ) {
                     items(homeState.libraries) { lib ->
                         LibraryCard(
                             name = lib.name,
                             collectionType = lib.collectionType ?: "movies",
-                            onClick = {
-                                onNavigateToLibrary(lib.id, lib.name)
-                            },
+                            onClick = { onNavigateToLibrary(lib.id, lib.name) },
                             modifier = Modifier
-                                .width(170.dp)
-                                .height(115.dp)
+                                .width(160.dp)
+                                .height(100.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
 
-        // Latest Feature Films & TV Shows
-        if (homeState.latestItems.isNotEmpty()) {
-            item {
-                SectionHeader(
-                    title = "Latest Additions",
-                    subtitle = "Recently added to server",
-                    actionText = "See All",
-                    onActionClick = {
-                        val firstLib = homeState.libraries.firstOrNull()
-                        if (firstLib != null) {
-                            onNavigateToLibrary(firstLib.id, firstLib.name)
-                        }
-                    }
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(homeState.latestItems) { item ->
-                        MediaPosterCard(
-                            item = item,
-                            imageUrl = viewModel.getImageUrl(item, isBackdrop = false),
-                            onClick = { onNavigateToItem(item.id) },
-                            modifier = Modifier.width(135.dp)
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
             }
         }
 
@@ -553,10 +683,14 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(32.dp),
+                        .padding(AppSpacing.xl),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = AccentCyan)
+                    CircularProgressIndicator(
+                        color = AppAccent,
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
                 }
             }
         }

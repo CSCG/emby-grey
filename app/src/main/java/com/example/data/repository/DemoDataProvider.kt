@@ -28,6 +28,13 @@ object DemoDataProvider {
             type = "CollectionFolder",
             collectionType = "movies",
             overview = "Open source cinema masterpieces"
+        ),
+        EmbyItemDto(
+            id = "view_collections",
+            name = "Collections",
+            type = "CollectionFolder",
+            collectionType = "boxsets",
+            overview = "Curated sagas and open cinema franchises"
         )
     )
 
@@ -69,7 +76,7 @@ object DemoDataProvider {
             communityRating = 7.8f,
             officialRating = "PG-13",
             genres = listOf("Sci-Fi", "Action", "Short"),
-            userData = UserDataDto(playbackPositionTicks = 0L, played = false),
+            userData = UserDataDto(playbackPositionTicks = 320_000_0000L, played = false),
             mediaSources = listOf(
                 MediaSourceDto(
                     id = "src_tos",
@@ -121,7 +128,7 @@ object DemoDataProvider {
             communityRating = 7.5f,
             officialRating = "PG",
             genres = listOf("Animation", "Sci-Fi", "Mystery"),
-            userData = UserDataDto(playbackPositionTicks = 0L, played = true),
+            userData = UserDataDto(playbackPositionTicks = 210_000_0000L, played = false),
             mediaSources = listOf(
                 MediaSourceDto(
                     id = "src_ed",
@@ -131,6 +138,19 @@ object DemoDataProvider {
                     bitrate = 1_800_000
                 )
             )
+        )
+    )
+
+    val demoCollections = listOf(
+        EmbyItemDto(
+            id = "boxset_open_cinema",
+            name = "Blender Open Cinema Collection",
+            type = "BoxSet",
+            collectionType = "movies",
+            overview = "The complete multi-award-winning collection of iconic Blender Foundation open movies and computer animations.",
+            productionYear = 2024,
+            communityRating = 8.6f,
+            genres = listOf("Animation", "Cinema", "Sci-Fi", "Fantasy")
         )
     )
 
@@ -144,7 +164,7 @@ object DemoDataProvider {
             communityRating = 8.7f,
             officialRating = "TV-14",
             genres = listOf("Animation", "Fantasy", "Sci-Fi"),
-            userData = UserDataDto(playbackPositionTicks = 0L, played = false)
+            userData = UserDataDto(playbackPositionTicks = 200_000_0000L, played = false)
         )
     )
 
@@ -190,7 +210,7 @@ object DemoDataProvider {
             runTimeTicks = 680_000_0000L,
             communityRating = 8.5f,
             genres = listOf("Animation", "Fantasy"),
-            userData = UserDataDto(playbackPositionTicks = 0L, played = false),
+            userData = UserDataDto(playbackPositionTicks = 160_000_0000L, played = false),
             mediaSources = listOf(
                 MediaSourceDto(
                     id = "src_ep_cosmos_2",
@@ -203,6 +223,10 @@ object DemoDataProvider {
         )
     )
 
+    fun getCollectionItems(collectionId: String): List<EmbyItemDto> {
+        return demoMovies
+    }
+
     // Direct playback video streams for open media
     fun getStreamUrl(itemId: String): String {
         return when (itemId) {
@@ -211,8 +235,9 @@ object DemoDataProvider {
             "movie_sintel" -> "https://media.w3.org/2010/05/sintel/trailer.mp4"
             "movie_elephants_dream" -> "https://vjs.zencdn.net/v/oceans.mp4"
             "ep_cosmos_1" -> "https://media.w3.org/2010/05/bunny/movie.mp4"
-            "ep_cosmos_2" -> "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
-            else -> "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            "ep_cosmos_2" -> "https://media.w3.org/2010/05/sintel/trailer.mp4"
+            "series_cosmos" -> "https://media.w3.org/2010/05/bunny/movie.mp4"
+            else -> "https://media.w3.org/2010/05/bunny/movie.mp4"
         }
     }
 
@@ -243,6 +268,9 @@ object DemoDataProvider {
             "series_cosmos", "ep_cosmos_1", "ep_cosmos_2" -> if (isBackdrop)
                 "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1280&q=80"
                 else "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500&q=80"
+            "boxset_open_cinema" -> if (isBackdrop)
+                "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1280&q=80"
+                else "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&q=80"
             else -> "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&q=80"
         }
     }

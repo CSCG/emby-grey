@@ -40,6 +40,9 @@ interface ResumePointDao {
     @Query("SELECT * FROM resume_points WHERE itemId = :itemId LIMIT 1")
     suspend fun getResumePointSync(itemId: String): ResumePointEntity?
 
+    @Query("SELECT * FROM resume_points WHERE isCompleted = 0 AND positionTicks > 50000000 ORDER BY lastWatchedTimestamp DESC LIMIT 10")
+    suspend fun getAllRecentResumePoints(): List<ResumePointEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveResumePoint(resumePoint: ResumePointEntity)
 

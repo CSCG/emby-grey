@@ -26,6 +26,12 @@ data class DownloadItemEntity(
     val progressFraction: Float
         get() = if (fileSize > 0) (downloadedBytes.toFloat() / fileSize.toFloat()).coerceIn(0f, 1f) else 0f
 
+    val itemId: String
+        get() = id
+
+    val itemName: String
+        get() = title
+
     val formattedSize: String
         get() {
             val bytes = if (status == STATUS_COMPLETED) fileSize else downloadedBytes

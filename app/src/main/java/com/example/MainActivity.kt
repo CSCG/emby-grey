@@ -165,6 +165,21 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by remember(isConnected) {
                     mutableStateOf<Screen>(if (isConnected) Screen.Main else Screen.ServerSetup)
                 }
+                var screenBackStack by remember { mutableStateOf(listOf<Screen>()) }
+
+                fun navigateTo(newScreen: Screen) {
+                    screenBackStack = screenBackStack + currentScreen
+                    currentScreen = newScreen
+                }
+
+                fun navigateBack() {
+                    if (screenBackStack.isNotEmpty()) {
+                        currentScreen = screenBackStack.last()
+                        screenBackStack = screenBackStack.dropLast(1)
+                    } else {
+                        currentScreen = Screen.Main
+                    }
+                }
 
                 LaunchedEffect(currentScreen) {
                     activeScreen = currentScreen
@@ -191,7 +206,11 @@ class MainActivity : ComponentActivity() {
 
                 AnimatedContent(
                     targetState = currentScreen,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    transitionSpec = {
+                        androidx.compose.animation.core.tween<Float>(durationMillis = 200).let { spec ->
+                            fadeIn(animationSpec = spec) togetherWith fadeOut(animationSpec = androidx.compose.animation.core.tween(180))
+                        }
+                    },
                     label = "ScreenTransition"
                 ) { screen ->
                     when (screen) {
@@ -207,14 +226,14 @@ class MainActivity : ComponentActivity() {
                         is Screen.Main -> {
                             Scaffold(
                                 modifier = Modifier.fillMaxSize(),
-                                containerColor = CinemaBlack,
+                                containerColor = com.example.ui.theme.AppBackground,
                                 bottomBar = {
                                     NavigationBar(
                                         modifier = Modifier
                                             .windowInsetsPadding(WindowInsets.navigationBars)
                                             .testTag("bottom_nav_bar"),
-                                        containerColor = CinemaDarkSurface,
-                                        tonalElevation = 8.dp
+                                        containerColor = com.example.ui.theme.AppSurface,
+                                        tonalElevation = 0.dp
                                     ) {
                                         NavigationBarItem(
                                             selected = currentTab == MainTab.HOME,
@@ -225,13 +244,13 @@ class MainActivity : ComponentActivity() {
                                                     contentDescription = "Home"
                                                 )
                                             },
-                                            label = { Text("Home", fontSize = 11.sp) },
+                                            label = { Text("Home", fontSize = 11.sp, fontWeight = if (currentTab == MainTab.HOME) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal) },
                                             colors = NavigationBarItemDefaults.colors(
-                                                selectedIconColor = CinemaBlack,
-                                                selectedTextColor = AccentCyan,
-                                                indicatorColor = AccentCyan,
-                                                unselectedIconColor = TextSecondary,
-                                                unselectedTextColor = TextMuted
+                                                selectedIconColor = com.example.ui.theme.AppAccent,
+                                                selectedTextColor = com.example.ui.theme.AppAccent,
+                                                indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                                unselectedIconColor = com.example.ui.theme.AppTextSecondary,
+                                                unselectedTextColor = com.example.ui.theme.AppTextTertiary
                                             ),
                                             modifier = Modifier.testTag("nav_tab_home")
                                         )
@@ -242,16 +261,16 @@ class MainActivity : ComponentActivity() {
                                             icon = {
                                                 Icon(
                                                     imageVector = if (currentTab == MainTab.LIVE_TV) Icons.Filled.LiveTv else Icons.Outlined.LiveTv,
-                                                    contentDescription = "Live TV"
+                                                    contentDescription = "Live"
                                                 )
                                             },
-                                            label = { Text("Live TV", fontSize = 11.sp) },
+                                            label = { Text("Live", fontSize = 11.sp, fontWeight = if (currentTab == MainTab.LIVE_TV) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal) },
                                             colors = NavigationBarItemDefaults.colors(
-                                                selectedIconColor = CinemaBlack,
-                                                selectedTextColor = AccentCyan,
-                                                indicatorColor = AccentCyan,
-                                                unselectedIconColor = TextSecondary,
-                                                unselectedTextColor = TextMuted
+                                                selectedIconColor = com.example.ui.theme.AppAccent,
+                                                selectedTextColor = com.example.ui.theme.AppAccent,
+                                                indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                                unselectedIconColor = com.example.ui.theme.AppTextSecondary,
+                                                unselectedTextColor = com.example.ui.theme.AppTextTertiary
                                             ),
                                             modifier = Modifier.testTag("nav_tab_live_tv")
                                         )
@@ -262,16 +281,16 @@ class MainActivity : ComponentActivity() {
                                             icon = {
                                                 Icon(
                                                     imageVector = if (currentTab == MainTab.LIBRARIES) Icons.Filled.VideoLibrary else Icons.Outlined.VideoLibrary,
-                                                    contentDescription = "Libraries"
+                                                    contentDescription = "Library"
                                                 )
                                             },
-                                            label = { Text("Libraries", fontSize = 11.sp) },
+                                            label = { Text("Library", fontSize = 11.sp, fontWeight = if (currentTab == MainTab.LIBRARIES) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal) },
                                             colors = NavigationBarItemDefaults.colors(
-                                                selectedIconColor = CinemaBlack,
-                                                selectedTextColor = AccentCyan,
-                                                indicatorColor = AccentCyan,
-                                                unselectedIconColor = TextSecondary,
-                                                unselectedTextColor = TextMuted
+                                                selectedIconColor = com.example.ui.theme.AppAccent,
+                                                selectedTextColor = com.example.ui.theme.AppAccent,
+                                                indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                                unselectedIconColor = com.example.ui.theme.AppTextSecondary,
+                                                unselectedTextColor = com.example.ui.theme.AppTextTertiary
                                             ),
                                             modifier = Modifier.testTag("nav_tab_libraries")
                                         )
@@ -285,35 +304,15 @@ class MainActivity : ComponentActivity() {
                                                     contentDescription = "Downloads"
                                                 )
                                             },
-                                            label = { Text("Offline", fontSize = 11.sp) },
+                                            label = { Text("Downloads", fontSize = 11.sp, fontWeight = if (currentTab == MainTab.DOWNLOADS) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal) },
                                             colors = NavigationBarItemDefaults.colors(
-                                                selectedIconColor = CinemaBlack,
-                                                selectedTextColor = AccentCyan,
-                                                indicatorColor = AccentCyan,
-                                                unselectedIconColor = TextSecondary,
-                                                unselectedTextColor = TextMuted
+                                                selectedIconColor = com.example.ui.theme.AppAccent,
+                                                selectedTextColor = com.example.ui.theme.AppAccent,
+                                                indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                                unselectedIconColor = com.example.ui.theme.AppTextSecondary,
+                                                unselectedTextColor = com.example.ui.theme.AppTextTertiary
                                             ),
                                             modifier = Modifier.testTag("nav_tab_downloads")
-                                        )
-
-                                        NavigationBarItem(
-                                            selected = currentTab == MainTab.SETTINGS,
-                                            onClick = { currentTab = MainTab.SETTINGS },
-                                            icon = {
-                                                Icon(
-                                                    imageVector = if (currentTab == MainTab.SETTINGS) Icons.Filled.Settings else Icons.Outlined.Settings,
-                                                    contentDescription = "Settings"
-                                                )
-                                            },
-                                            label = { Text("Settings", fontSize = 11.sp) },
-                                            colors = NavigationBarItemDefaults.colors(
-                                                selectedIconColor = CinemaBlack,
-                                                selectedTextColor = AccentCyan,
-                                                indicatorColor = AccentCyan,
-                                                unselectedIconColor = TextSecondary,
-                                                unselectedTextColor = TextMuted
-                                            ),
-                                            modifier = Modifier.testTag("nav_tab_settings")
                                         )
                                     }
                                 }
@@ -328,22 +327,34 @@ class MainActivity : ComponentActivity() {
                                             HomeScreen(
                                                 viewModel = embyViewModel,
                                                 onNavigateToItem = { id ->
-                                                    currentScreen = Screen.ItemDetail(id)
+                                                    navigateTo(Screen.ItemDetail(id))
                                                 },
                                                 onNavigateToLibrary = { id, name ->
-                                                    currentScreen = Screen.LibraryDetail(id, name)
+                                                    navigateTo(Screen.LibraryDetail(id, name))
                                                 },
                                                 onNavigateToPlayer = { id ->
                                                     val liveCh = embyViewModel.liveTvChannels.value.firstOrNull { it.id == id }
                                                     if (liveCh != null) {
                                                         val itemDto = embyViewModel.buildLiveTvItemDto(liveCh)
-                                                        currentScreen = Screen.Player(itemDto, PlaybackQuality.DIRECT_PLAY)
+                                                        navigateTo(Screen.Player(itemDto, PlaybackQuality.DIRECT_PLAY))
                                                     } else {
-                                                        val item = (homeState.continueWatching + homeState.latestItems).firstOrNull { it.id == id }
+                                                        val item = (homeState.continueWatching + homeState.latestItems + homeState.collections).firstOrNull { it.id == id }
                                                         if (item != null) {
-                                                            currentScreen = Screen.Player(item, PlaybackQuality.DIRECT_PLAY)
+                                                            if (item.type.equals("Series", ignoreCase = true)) {
+                                                                val eps = embyViewModel.episodes.value.filter { it.seriesId == item.id }
+                                                                val targetEp = eps.firstOrNull { it.resumePositionTicks > 0 && !it.isPlayed }
+                                                                    ?: eps.firstOrNull { !it.isPlayed }
+                                                                    ?: eps.firstOrNull()
+                                                                if (targetEp != null) {
+                                                                    navigateTo(Screen.Player(targetEp, PlaybackQuality.DIRECT_PLAY))
+                                                                } else {
+                                                                    navigateTo(Screen.Player(item, PlaybackQuality.DIRECT_PLAY))
+                                                                }
+                                                            } else {
+                                                                navigateTo(Screen.Player(item, PlaybackQuality.DIRECT_PLAY))
+                                                            }
                                                         } else {
-                                                            currentScreen = Screen.ItemDetail(id)
+                                                            navigateTo(Screen.ItemDetail(id))
                                                         }
                                                     }
                                                 },
@@ -354,7 +365,7 @@ class MainActivity : ComponentActivity() {
                                                     currentTab = MainTab.SETTINGS
                                                 },
                                                 onNavigateToSearch = {
-                                                    currentScreen = Screen.Search
+                                                    navigateTo(Screen.Search)
                                                 },
                                                 onNavigateToLiveTv = {
                                                     currentTab = MainTab.LIVE_TV
@@ -366,9 +377,11 @@ class MainActivity : ComponentActivity() {
                                             LiveTvScreen(
                                                 viewModel = embyViewModel,
                                                 onPlayLiveChannel = { channelItem ->
-                                                    currentScreen = Screen.Player(
-                                                        item = channelItem,
-                                                        quality = PlaybackQuality.DIRECT_PLAY
+                                                    navigateTo(
+                                                        Screen.Player(
+                                                            item = channelItem,
+                                                            quality = PlaybackQuality.DIRECT_PLAY
+                                                        )
                                                     )
                                                 }
                                             )
@@ -378,10 +391,10 @@ class MainActivity : ComponentActivity() {
                                             LibrariesScreen(
                                                 viewModel = embyViewModel,
                                                 onNavigateToLibrary = { id, name ->
-                                                    currentScreen = Screen.LibraryDetail(id, name)
+                                                    navigateTo(Screen.LibraryDetail(id, name))
                                                 },
                                                 onNavigateToSearch = {
-                                                    currentScreen = Screen.Search
+                                                    navigateTo(Screen.Search)
                                                 }
                                             )
                                         }
@@ -399,10 +412,12 @@ class MainActivity : ComponentActivity() {
                                                         parentIndexNumber = download.seasonNumber,
                                                         runTimeTicks = download.durationMs * 10_000L
                                                     )
-                                                    currentScreen = Screen.Player(
-                                                        item = offlineItem,
-                                                        quality = PlaybackQuality.DIRECT_PLAY,
-                                                        localFilePath = download.localFilePath
+                                                    navigateTo(
+                                                        Screen.Player(
+                                                            item = offlineItem,
+                                                            quality = PlaybackQuality.DIRECT_PLAY,
+                                                            localFilePath = download.localFilePath
+                                                        )
                                                     )
                                                 }
                                             )
@@ -427,7 +442,7 @@ class MainActivity : ComponentActivity() {
                                 libraryName = screen.name,
                                 viewModel = embyViewModel,
                                 onNavigateBack = { currentScreen = Screen.Main },
-                                onNavigateToItem = { id -> currentScreen = Screen.ItemDetail(id) }
+                                onNavigateToItem = { id -> navigateTo(Screen.ItemDetail(id)) }
                             )
                         }
 
@@ -435,15 +450,31 @@ class MainActivity : ComponentActivity() {
                             ItemDetailScreen(
                                 itemId = screen.itemId,
                                 viewModel = embyViewModel,
-                                onNavigateBack = { currentScreen = Screen.Main },
+                                onNavigateBack = { navigateBack() },
+                                onNavigateToItem = { id -> navigateTo(Screen.ItemDetail(id)) },
                                 onPlayMedia = { id, quality, startFromBeginning ->
-                                    val item = embyViewModel.selectedItem.value
-                                        ?: (embyViewModel.episodes.value).firstOrNull { it.id == id }
-                                    if (item != null) {
-                                        currentScreen = Screen.Player(
-                                            item = item,
-                                            quality = quality,
-                                            startFromBeginning = startFromBeginning
+                                    val episode = embyViewModel.episodes.value.firstOrNull { it.id == id }
+                                    val collectionItem = embyViewModel.collectionItems.value.firstOrNull { it.id == id }
+                                    val selected = embyViewModel.selectedItem.value
+                                    val targetItem = episode
+                                        ?: collectionItem
+                                        ?: if (selected?.id == id && !selected.type.equals("Series", ignoreCase = true)) selected
+                                        else null
+                                        ?: (homeState.continueWatching + homeState.latestItems + homeState.collections).firstOrNull { it.id == id && !it.type.equals("Series", ignoreCase = true) }
+                                        ?: run {
+                                            val eps = embyViewModel.episodes.value
+                                            eps.firstOrNull { it.resumePositionTicks > 0 && !it.isPlayed }
+                                                ?: eps.firstOrNull { !it.isPlayed }
+                                                ?: eps.firstOrNull()
+                                        }
+                                        ?: selected
+                                    if (targetItem != null) {
+                                        navigateTo(
+                                            Screen.Player(
+                                                item = targetItem,
+                                                quality = quality,
+                                                startFromBeginning = startFromBeginning
+                                            )
                                         )
                                     }
                                 }
@@ -453,8 +484,8 @@ class MainActivity : ComponentActivity() {
                         is Screen.Search -> {
                             SearchScreen(
                                 viewModel = embyViewModel,
-                                onNavigateBack = { currentScreen = Screen.Main },
-                                onNavigateToItem = { id -> currentScreen = Screen.ItemDetail(id) }
+                                onNavigateBack = { navigateBack() },
+                                onNavigateToItem = { id -> navigateTo(Screen.ItemDetail(id)) }
                             )
                         }
 
@@ -467,7 +498,7 @@ class MainActivity : ComponentActivity() {
                                 playerViewModel = playerViewModel,
                                 onNavigateBack = {
                                     embyViewModel.loadHomeData()
-                                    currentScreen = Screen.Main
+                                    navigateBack()
                                 }
                             )
                         }

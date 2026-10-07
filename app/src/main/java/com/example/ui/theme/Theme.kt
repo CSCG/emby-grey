@@ -1,31 +1,42 @@
 package com.example.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
-private val EmbyStreamColorScheme = darkColorScheme(
-    primary = AccentCyan,
-    onPrimary = Color(0xFF00363A),
-    primaryContainer = Color(0xFF004D53),
-    onPrimaryContainer = Color(0xFF80F5FF),
-    secondary = AccentEmerald,
-    onSecondary = Color(0xFF003918),
-    secondaryContainer = Color(0xFF005324),
-    onSecondaryContainer = Color(0xFF6BFF9E),
-    tertiary = AccentPurple,
-    onTertiary = Color.White,
-    background = CinemaBlack,
-    onBackground = TextPrimary,
-    surface = CinemaDarkSurface,
-    onSurface = TextPrimary,
-    surfaceVariant = CinemaSurfaceVariant,
-    onSurfaceVariant = TextSecondary,
-    outline = CinemaCardBorder,
-    outlineVariant = Color(0xFF1E2638),
-    error = AccentRed,
+private val ContentFirstDarkColorScheme = darkColorScheme(
+    primary = AppAccent,
+    onPrimary = Color(0xFF04191C),
+    primaryContainer = AppAccentSubtle,
+    onPrimaryContainer = AppTextPrimary,
+    secondary = AppAccent,
+    onSecondary = Color(0xFF04191C),
+    secondaryContainer = AppElevatedSurface,
+    onSecondaryContainer = AppTextPrimary,
+    tertiary = AppTextSecondary,
+    onTertiary = AppBackground,
+    background = AppBackground,
+    onBackground = AppTextPrimary,
+    surface = AppSurface,
+    onSurface = AppTextPrimary,
+    surfaceVariant = AppElevatedSurface,
+    onSurfaceVariant = AppTextSecondary,
+    outline = AppDivider,
+    outlineVariant = AppSelectedSurface,
+    error = AppLiveRed,
     onError = Color.White
+)
+
+val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp), // badges
+    small = RoundedCornerShape(6.dp),      // minor tags
+    medium = RoundedCornerShape(8.dp),     // cards, artwork, buttons
+    large = RoundedCornerShape(12.dp),     // hero banners
+    extraLarge = RoundedCornerShape(16.dp) // sheets, dialogs
 )
 
 @Composable
@@ -35,8 +46,9 @@ fun MyApplicationTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = EmbyStreamColorScheme,
+        colorScheme = ContentFirstDarkColorScheme,
         typography = Typography,
+        shapes = AppShapes,
         content = content
     )
 }

@@ -1,11 +1,8 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,244 +18,267 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.VideoLibrary
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.data.model.EmbyItemDto
-import com.example.ui.theme.AccentAmber
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentEmerald
-import com.example.ui.theme.CinemaDarkSurface
-import com.example.ui.theme.CinemaSurfaceVariant
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.data.model.LiveTvChannelDto
+import com.example.ui.theme.AppAccent
+import com.example.ui.theme.AppBackground
+import com.example.ui.theme.AppElevatedSurface
+import com.example.ui.theme.AppLiveRed
+import com.example.ui.theme.AppRadii
+import com.example.ui.theme.AppSelectedSurface
+import com.example.ui.theme.AppSpacing
+import com.example.ui.theme.AppSurface
+import com.example.ui.theme.AppTextPrimary
+import com.example.ui.theme.AppTextSecondary
+import com.example.ui.theme.AppTextTertiary
+import com.example.ui.theme.AppTypography
 
+/**
+ * Content-first media poster card.
+ * Artwork dominates with restrained 8dp corners. No outer card container or heavy borders.
+ */
 @Composable
 fun MediaPosterCard(
     item: EmbyItemDto,
     imageUrl: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    aspectRatio: Float = 2f / 3f
+    aspectRatio: Float = 2f / 3f,
+    showRemainingTime: Boolean = false
 ) {
     val context = LocalContext.current
+    val interactionSource = remember { MutableInteractionSource() }
 
-    Card(
+    Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .testTag("media_card_${item.id}"),
-        colors = CardDefaults.cardColors(containerColor = CinemaSurfaceVariant),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .clip(RoundedCornerShape(AppRadii.card))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = AppAccent.copy(alpha = 0.2f)),
+                onClick = onClick
+            )
+            .testTag("media_card_${item.id}")
     ) {
-        Column {
+        // Thumbnail Artwork Container
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(aspectRatio)
+                .clip(RoundedCornerShape(AppRadii.card))
+                .background(AppElevatedSurface)
+        ) {
+            SubcomposeAsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = item.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                loading = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(AppElevatedSurface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = AppAccent.copy(alpha = 0.4f),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                },
+                error = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(AppElevatedSurface)
+                            .padding(AppSpacing.xs),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (item.type == "Series") Icons.Default.Tv else Icons.Default.Movie,
+                            contentDescription = null,
+                            tint = AppTextTertiary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            )
+
+            // Subtle bottom gradient for readability if needed
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(aspectRatio)
-                    .background(CinemaDarkSurface)
-            ) {
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(imageUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = item.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    loading = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(CinemaDarkSurface),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = AccentCyan.copy(alpha = 0.5f),
-                                strokeWidth = 2.dp
-                            )
-                        }
-                    },
-                    error = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(CinemaSurfaceVariant, CinemaDarkSurface)
-                                    )
-                                )
-                                .padding(8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = if (item.type == "Series") Icons.Default.Tv else Icons.Default.Movie,
-                                    contentDescription = null,
-                                    tint = TextMuted,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = item.name,
-                                    color = TextSecondary,
-                                    fontSize = 11.sp,
-                                    maxLines = 2,
-                                    textAlign = TextAlign.Center,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                )
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f)),
+                            startY = 160f
+                        )
+                    )
+            )
 
-                // Bottom gradient for readability
+            // Rating indicator (minimal, top-end)
+            if (item.communityRating != null && item.communityRating > 0 && aspectRatio <= 1f) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(AppSpacing.xs),
+                    shape = RoundedCornerShape(AppRadii.badge),
+                    color = Color.Black.copy(alpha = 0.65f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = Color(0xFFFFB300),
+                            modifier = Modifier.size(10.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = String.format("%.1f", item.communityRating),
+                            color = AppTextPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            // Flush playback progress bar against bottom edge of thumbnail
+            if (item.resumeFraction > 0.02f) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
-                                startY = 140f
-                            )
-                        )
-                )
-
-                // Rating Badge
-                if (item.communityRating != null && item.communityRating > 0) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        color = Color.Black.copy(alpha = 0.75f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Rating",
-                                tint = AccentAmber,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = String.format("%.1f", item.communityRating),
-                                color = TextPrimary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                // Media type pill
-                if (item.type == "Series") {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(6.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        color = AccentCyan.copy(alpha = 0.9f)
-                    ) {
-                        Text(
-                            text = "SERIES",
-                            color = Color.Black,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-
-                // Resume progress bar
-                if (item.resumeFraction > 0.02f) {
-                    LinearProgressIndicator(
-                        progress = { item.resumeFraction },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .align(Alignment.BottomCenter),
-                        color = AccentCyan,
-                        trackColor = Color.White.copy(alpha = 0.3f),
-                    )
-                }
-            }
-
-            // Text metadata
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text(
-                    text = item.name,
-                    color = TextPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(AppSelectedSurface)
                 ) {
-                    val year = item.productionYear?.toString() ?: ""
-                    val duration = if (item.durationMinutes > 0) "${item.durationMinutes}m" else ""
-                    Text(
-                        text = listOf(year, duration).filter { it.isNotBlank() }.joinToString(" • "),
-                        color = TextSecondary,
-                        fontSize = 11.sp
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction = item.resumeFraction.coerceIn(0f, 1f))
+                            .height(3.dp)
+                            .background(AppAccent)
                     )
-                    if (item.officialRating != null) {
-                        Text(
-                            text = item.officialRating,
-                            color = TextMuted,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(AppSpacing.xs))
+
+        // Title & metadata below artwork
+        Text(
+            text = item.name,
+            style = AppTypography.cardTitle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        val metadataText = if (showRemainingTime && item.resumePositionTicks > 0L && item.runTimeTicks != null) {
+            val remainingTicks = (item.runTimeTicks - item.resumePositionTicks).coerceAtLeast(0L)
+            val remainingMins = (remainingTicks / 10_000_000L / 60L).toInt()
+            if (remainingMins > 0) "${remainingMins}m remaining" else "${item.durationMinutes}m"
+        } else {
+            val year = item.productionYear?.toString() ?: ""
+            val duration = if (item.durationMinutes > 0) "${item.durationMinutes}m" else ""
+            listOf(year, duration).filter { it.isNotBlank() }.joinToString(" • ")
+        }
+
+        if (metadataText.isNotBlank()) {
+            Text(
+                text = metadataText,
+                style = AppTypography.metadata,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
 
+/**
+ * Clean Section Header without redundant promotional descriptions.
+ */
+@Composable
+fun SectionHeader(
+    title: String,
+    subtitle: String? = null,
+    actionText: String? = null,
+    onActionClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = AppSpacing.md),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = title,
+                style = AppTypography.sectionTitle
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = AppTypography.metadata
+                )
+            }
+        }
+
+        if (actionText != null && onActionClick != null) {
+            Text(
+                text = actionText,
+                color = AppAccent,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(AppRadii.badge))
+                    .clickable(onClick = onActionClick)
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Refined Library collection card without loud neon gradients.
+ */
 @Composable
 fun LibraryCard(
     name: String,
@@ -278,109 +298,197 @@ fun LibraryCard(
 
     val subtitle = when {
         normalizedType.contains("movie") -> "Feature Films"
-        normalizedType.contains("tv") -> "TV Series & Shows"
-        normalizedType.contains("collection") || normalizedType.contains("boxset") -> "Collections & Boxsets"
-        normalizedType.contains("playlist") -> "Custom Playlists"
-        normalizedType.contains("live") || normalizedType.contains("iptv") -> "Live Streams & IPTV"
-        else -> "Media Collection"
+        normalizedType.contains("tv") -> "TV Series"
+        normalizedType.contains("collection") -> "Collections"
+        normalizedType.contains("playlist") -> "Playlists"
+        normalizedType.contains("live") || normalizedType.contains("iptv") -> "Live Streams"
+        else -> "Collection"
     }
 
-    val gradientColors = when {
-        normalizedType.contains("movie") -> listOf(Color(0xFF0072FF), Color(0xFF00C6FF))
-        normalizedType.contains("tv") -> listOf(Color(0xFF7F00FF), Color(0xFFE100FF))
-        normalizedType.contains("collection") -> listOf(Color(0xFF00897B), Color(0xFF4DB6AC))
-        normalizedType.contains("playlist") -> listOf(Color(0xFF5E35B1), Color(0xFF9575CD))
-        normalizedType.contains("live") || normalizedType.contains("iptv") -> listOf(Color(0xFFE53935), Color(0xFFFF7043))
-        else -> listOf(Color(0xFF11998E), Color(0xFF38EF7D))
-    }
+    val interactionSource = remember { MutableInteractionSource() }
 
-    Card(
+    Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
+            .clip(RoundedCornerShape(AppRadii.card))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = AppAccent.copy(alpha = 0.15f)),
+                onClick = onClick
+            )
             .testTag("library_card_$name"),
-        colors = CardDefaults.cardColors(containerColor = CinemaSurfaceVariant),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(AppRadii.card),
+        color = AppElevatedSurface
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.linearGradient(gradientColors.map { it.copy(alpha = 0.35f) }))
-                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                .padding(16.dp)
+                .padding(AppSpacing.md),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.align(Alignment.BottomStart)) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(Color.White.copy(alpha = 0.15f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = name,
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = AppTextSecondary,
+                modifier = Modifier.size(26.dp)
+            )
+
+            Column {
                 Text(
                     text = name,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    style = AppTypography.cardTitle,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 12.sp
+                    style = AppTypography.metadata,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
     }
 }
 
+/**
+ * Content-first Live Channel / Stream preview item.
+ * Uses 16:9 thumbnail preview with consistent small red LIVE indicator.
+ */
 @Composable
-fun SectionHeader(
-    title: String,
-    subtitle: String? = null,
-    actionText: String? = null,
-    onActionClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+fun LiveChannelCard(
+    channel: LiveTvChannelDto,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    thumbnailUrl: String? = null
 ) {
-    Row(
+    val context = LocalContext.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isTraffic = channel.isTrafficCam
+    val image = thumbnailUrl ?: channel.snapshotUrl ?: channel.logoUrl
+
+    Column(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text(
-                text = title,
-                color = TextPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+            .clip(RoundedCornerShape(AppRadii.card))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = AppAccent.copy(alpha = 0.2f)),
+                onClick = onClick
             )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    color = TextSecondary,
-                    fontSize = 12.sp
+            .testTag("home_live_channel_${channel.id}")
+    ) {
+        // 16:9 Preview Frame
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(AppRadii.card))
+                .background(AppElevatedSurface)
+        ) {
+            if (!image.isNullOrBlank()) {
+                SubcomposeAsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(image)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = channel.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    loading = {
+                        Box(modifier = Modifier.fillMaxSize().background(AppElevatedSurface))
+                    },
+                    error = {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(AppElevatedSurface),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LiveTv,
+                                contentDescription = null,
+                                tint = AppTextTertiary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
                 )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(AppElevatedSurface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LiveTv,
+                        contentDescription = null,
+                        tint = AppTextTertiary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            // Dark bottom scrim
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f)),
+                            startY = 40f
+                        )
+                    )
+            )
+
+            // Small consistent red LIVE indicator
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(AppSpacing.xs),
+                shape = RoundedCornerShape(AppRadii.badge),
+                color = Color.Black.copy(alpha = 0.7f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .clip(CircleShape)
+                            .background(AppLiveRed)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "LIVE",
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
-        if (actionText != null && onActionClick != null) {
-            Text(
-                text = actionText,
-                color = AccentCyan,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .clickable(onClick = onActionClick)
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            )
+
+        Spacer(modifier = Modifier.height(AppSpacing.xs))
+
+        // Title and source
+        Text(
+            text = channel.name,
+            style = AppTypography.cardTitle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        val subtitle = when {
+            isTraffic && !channel.location.isNullOrBlank() -> channel.location
+            !channel.currentProgram?.name.isNullOrBlank() -> channel.currentProgram!!.name
+            else -> channel.category
         }
+
+        Text(
+            text = subtitle,
+            style = AppTypography.metadata,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

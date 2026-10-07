@@ -27,6 +27,7 @@ data class HomeUiState(
     val libraries: List<EmbyItemDto> = emptyList(),
     val continueWatching: List<EmbyItemDto> = emptyList(),
     val latestItems: List<EmbyItemDto> = emptyList(),
+    val collections: List<EmbyItemDto> = emptyList(),
     val errorMessage: String? = null
 )
 
@@ -65,6 +66,9 @@ class EmbyViewModel(
 
     private val _similarItems = MutableStateFlow<List<EmbyItemDto>>(emptyList())
     val similarItems: StateFlow<List<EmbyItemDto>> = _similarItems.asStateFlow()
+
+    private val _collectionItems = MutableStateFlow<List<EmbyItemDto>>(emptyList())
+    val collectionItems: StateFlow<List<EmbyItemDto>> = _collectionItems.asStateFlow()
 
     private val _selectedPerson = MutableStateFlow<PersonDto?>(null)
     val selectedPerson: StateFlow<PersonDto?> = _selectedPerson.asStateFlow()
@@ -105,12 +109,14 @@ class EmbyViewModel(
                 val views = repository.getViews()
                 val resume = repository.getResumeItems()
                 val latest = repository.getLatestItems()
+                val collections = repository.getCollections()
                 _homeState.value = _homeState.value.copy(
                     isLoading = false,
                     connection = preferences.getConnection(),
                     libraries = views,
                     continueWatching = resume,
-                    latestItems = latest
+                    latestItems = latest,
+                    collections = collections
                 )
             } catch (e: Exception) {
                 _homeState.value = _homeState.value.copy(
@@ -164,10 +170,32 @@ class EmbyViewModel(
         viewModelScope.launch {
             val item = repository.getItemDetails(itemId)
             _selectedItem.value = item
-            if (item?.type == "Series") {
-                _episodes.value = repository.getEpisodes(seriesId = itemId)
-            } else {
-                _episodes.value = emptyList()
+            val isSeries = item?.type.equals("Series", ignoreCase = true) || item?.type.equals("Season", ignoreCase = true)
+            val isCollection = item?.type.equals("BoxSet", ignoreCase = true) ||
+                    item?.type.equals("CollectionFolder", ignoreCase = true) ||
+                    item?.type.equals("Playlist", ignoreCase = true) ||
+                    item?.type.equals("Folder", ignoreCase = true) ||
+                    item?.collectionType != null ||
+                    item?.type?.contains("Collection", ignoreCase = true) == true ||
+                    itemId.startsWith("boxset_")
+
+            when {
+                isSeries -> {
+                    _episodes.value = repository.getEpisodes(seriesId = itemId)
+                    _collectionItems.value = emptyList()
+                }
+                isCollection -> {
+                    _collectionItems.value = repository.getCollectionItems(collectionId = itemId)
+                    _episodes.value = emptyList()
+                }
+                item?.type.equals("Episode", ignoreCase = true) && !item?.seriesId.isNullOrBlank() -> {
+                    _episodes.value = repository.getEpisodes(seriesId = item?.seriesId ?: "")
+                    _collectionItems.value = emptyList()
+                }
+                else -> {
+                    _episodes.value = emptyList()
+                    _collectionItems.value = emptyList()
+                }
             }
             _similarItems.value = repository.getSimilarItems(itemId)
         }
@@ -320,6 +348,16 @@ class EmbyViewModel(
             loadHomeData()
         }
     }
+
+    // Compatibility aliases for UI screens
+    fun connectToServer(url: String, user: String, pass: String, onSuccess: () -> Unit) = connectServer(url, user, pass, onSuccess)
+    fun loadDemoMode(onSuccess: () -> Unit) = connectDemoServer(onSuccess)
+    fun disconnect() = disconnectServer()
+    fun updateSearchQuery(query: String) = onSearchQueryChanged(query)
+    fun updateDefaultQuality(quality: PlaybackQuality) = setDefaultQuality(quality)
+    fun setHardwareAcceleration(enabled: Boolean) = setHwAcceleration(enabled)
+    fun updatePreferredSubtitle(lang: String) = setPreferredSubtitleLang(lang)
+    fun cancelDownload(itemId: String) = deleteDownload(itemId)
 }
 
 class EmbyViewModelFactory(

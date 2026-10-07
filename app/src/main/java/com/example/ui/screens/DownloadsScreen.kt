@@ -2,9 +2,7 @@ package com.example.ui.screens
 
 import android.os.Environment
 import android.os.StatFs
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,14 +19,10 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.OfflinePin
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material3.AlertDialog
@@ -50,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -60,17 +53,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.local.DownloadItemEntity
-import com.example.ui.components.SectionHeader
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentEmerald
-import com.example.ui.theme.AccentRed
-import com.example.ui.theme.CinemaBlack
-import com.example.ui.theme.CinemaCardBorder
-import com.example.ui.theme.CinemaDarkSurface
-import com.example.ui.theme.CinemaSurfaceVariant
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.AppAccent
+import com.example.ui.theme.AppBackground
+import com.example.ui.theme.AppDivider
+import com.example.ui.theme.AppElevatedSurface
+import com.example.ui.theme.AppLiveRed
+import com.example.ui.theme.AppRadii
+import com.example.ui.theme.AppSelectedSurface
+import com.example.ui.theme.AppSpacing
+import com.example.ui.theme.AppSurface
+import com.example.ui.theme.AppTextPrimary
+import com.example.ui.theme.AppTextSecondary
+import com.example.ui.theme.AppTextTertiary
+import com.example.ui.theme.AppTypography
 import com.example.ui.viewmodel.EmbyViewModel
 import java.io.File
 
@@ -99,61 +94,42 @@ fun DownloadsScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(AppBackground)
             .statusBarsPadding()
             .testTag("downloads_screen_content"),
-        contentPadding = PaddingValues(bottom = 100.dp)
+        contentPadding = PaddingValues(bottom = 120.dp)
     ) {
         // Title Header
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(AccentCyan, AccentEmerald))),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudDone,
-                        contentDescription = "Downloads",
-                        tint = CinemaBlack,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Offline Synchronization",
-                        color = TextPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "Downloads",
+                        style = AppTypography.sectionTitle
                     )
                     Text(
-                        text = "Play media anywhere without an internet connection",
-                        color = TextSecondary,
-                        fontSize = 12.sp
+                        text = "${completedDownloads.size} items saved offline",
+                        style = AppTypography.metadata
                     )
                 }
             }
         }
 
-        // Storage Card
+        // Storage Bar Card
         item {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .border(1.dp, CinemaCardBorder, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                color = CinemaDarkSurface
+                    .padding(horizontal = AppSpacing.md, vertical = AppSpacing.xs),
+                shape = RoundedCornerShape(AppRadii.card),
+                color = AppElevatedSurface
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(AppSpacing.md)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -162,28 +138,25 @@ fun DownloadsScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.SdStorage,
-                                contentDescription = "Storage",
-                                tint = AccentCyan,
-                                modifier = Modifier.size(18.dp)
+                                contentDescription = null,
+                                tint = AppTextSecondary,
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(AppSpacing.xs))
                             Text(
                                 text = "Device Storage",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
+                                style = AppTypography.cardTitle
                             )
                         }
 
                         Text(
                             text = "${formatBytes(usedBytes)} used",
-                            color = AccentCyan,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            style = AppTypography.metadata,
+                            color = AppAccent
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(AppSpacing.sm))
 
                     val usedMb = usedBytes / (1024.0 * 1024.0)
                     val freeMb = freeBytes / (1024.0 * 1024.0)
@@ -194,27 +167,26 @@ fun DownloadsScreen(
                         progress = { fraction },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = AccentCyan,
-                        trackColor = CinemaSurfaceVariant
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = AppAccent,
+                        trackColor = AppSelectedSurface
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(AppSpacing.xs))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "${completedDownloads.size} items downloaded",
-                            color = TextSecondary,
-                            fontSize = 12.sp
+                            text = "${completedDownloads.size} items",
+                            style = AppTypography.metadata
                         )
                         Text(
                             text = "${formatBytes(freeBytes)} free",
-                            color = TextMuted,
-                            fontSize = 12.sp
+                            style = AppTypography.metadata,
+                            color = AppTextTertiary
                         )
                     }
                 }
@@ -224,79 +196,56 @@ fun DownloadsScreen(
         // Active Downloads
         if (activeDownloads.isNotEmpty()) {
             item {
-                SectionHeader(
-                    title = "Active Downloads (${activeDownloads.size})",
-                    subtitle = "Downloading media to local storage"
+                Spacer(modifier = Modifier.height(AppSpacing.sm))
+                Text(
+                    text = "Downloading",
+                    style = AppTypography.cardTitle,
+                    modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.xxs)
                 )
             }
 
-            items(activeDownloads) { dl ->
+            items(activeDownloads, key = { it.itemId }) { item ->
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .border(1.dp, CinemaCardBorder, RoundedCornerShape(12.dp)),
-                    shape = RoundedCornerShape(12.dp),
-                    color = CinemaSurfaceVariant
+                        .padding(horizontal = AppSpacing.md, vertical = 4.dp),
+                    shape = RoundedCornerShape(AppRadii.card),
+                    color = AppElevatedSurface
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = dl.title,
-                                    color = TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = dl.displaySubtitle,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            }
-
-                            IconButton(onClick = { viewModel.deleteDownload(dl.id) }) {
-                                Icon(
-                                    imageVector = Icons.Default.Cancel,
-                                    contentDescription = "Cancel",
-                                    tint = AccentRed
-                                )
-                            }
+                    Row(
+                        modifier = Modifier.padding(AppSpacing.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = item.itemName,
+                                style = AppTypography.cardTitle,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${(item.progressFraction * 100).toInt()}% • ${item.formattedSize}",
+                                style = AppTypography.metadata
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { item.progressFraction },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp)
+                                    .clip(RoundedCornerShape(1.5.dp)),
+                                color = AppAccent,
+                                trackColor = AppSelectedSurface
+                            )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        LinearProgressIndicator(
-                            progress = { dl.progressFraction },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp)),
-                            color = AccentCyan,
-                            trackColor = CinemaBlack
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "${(dl.progressFraction * 100).toInt()}% completed",
-                                color = AccentCyan,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = dl.formattedSize,
-                                color = TextMuted,
-                                fontSize = 11.sp
+                        IconButton(onClick = { viewModel.deleteDownload(item.id) }) {
+                            Icon(
+                                imageVector = Icons.Default.Cancel,
+                                contentDescription = "Cancel",
+                                tint = AppTextTertiary,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -304,165 +253,109 @@ fun DownloadsScreen(
             }
         }
 
-        // Completed Offline Media List
+        // Completed Downloads
         if (completedDownloads.isNotEmpty()) {
             item {
-                SectionHeader(
-                    title = "Downloaded Media",
-                    subtitle = "Ready for immediate offline playback"
+                Spacer(modifier = Modifier.height(AppSpacing.sm))
+                Text(
+                    text = "Downloaded Titles",
+                    style = AppTypography.cardTitle,
+                    modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.xxs)
                 )
             }
 
-            items(completedDownloads) { dl ->
+            items(completedDownloads, key = { it.itemId }) { item ->
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { onPlayOfflineMedia(dl) }
-                        .border(1.dp, CinemaCardBorder, RoundedCornerShape(14.dp))
-                        .testTag("download_item_${dl.id}"),
-                    shape = RoundedCornerShape(14.dp),
-                    color = CinemaDarkSurface
+                        .padding(horizontal = AppSpacing.md, vertical = 4.dp)
+                        .clip(RoundedCornerShape(AppRadii.card))
+                        .clickable { onPlayOfflineMedia(item) },
+                    shape = RoundedCornerShape(AppRadii.card),
+                    color = AppElevatedSurface
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(AppSpacing.sm),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Poster Thumbnail
                         Box(
                             modifier = Modifier
-                                .width(70.dp)
-                                .height(100.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(CinemaSurfaceVariant)
+                                .width(50.dp)
+                                .height(72.dp)
+                                .clip(RoundedCornerShape(AppRadii.tag))
+                                .background(AppSurface)
                         ) {
-                            if (dl.posterUrl != null) {
+                            if (item.posterUrl != null) {
                                 AsyncImage(
-                                    model = dl.posterUrl,
-                                    contentDescription = dl.title,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = 0.25f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Play",
-                                    tint = AccentCyan,
-                                    modifier = Modifier.size(28.dp)
+                                    model = item.posterUrl,
+                                    contentDescription = item.itemName,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.width(14.dp))
+                        Spacer(modifier = Modifier.width(AppSpacing.sm))
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = dl.title,
-                                color = TextPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
+                                text = item.itemName,
+                                style = AppTypography.cardTitle,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-
                             Spacer(modifier = Modifier.height(2.dp))
-
+                            val file = File(item.localFilePath ?: "")
+                            val exists = !item.localFilePath.isNullOrBlank() && file.exists()
+                            val detail = if (exists) "${item.formattedSize} • Ready to play" else "File missing"
                             Text(
-                                text = dl.displaySubtitle,
-                                color = TextSecondary,
-                                fontSize = 12.sp
+                                text = detail,
+                                style = AppTypography.metadata,
+                                color = if (exists) AppTextSecondary else AppLiveRed
                             )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = AccentEmerald.copy(alpha = 0.2f)
-                                ) {
-                                    Text(
-                                        text = "OFFLINE READY",
-                                        color = AccentEmerald,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-
-                                Text(
-                                    text = dl.formattedSize,
-                                    color = TextMuted,
-                                    fontSize = 11.sp
-                                )
-                            }
                         }
 
-                        IconButton(
-                            onClick = { itemToDelete = dl },
-                            modifier = Modifier.testTag("delete_download_${dl.id}")
-                        ) {
+                        // Play Button
+                        IconButton(onClick = { onPlayOfflineMedia(item) }) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Play",
+                                tint = AppAccent,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // Delete Button
+                        IconButton(onClick = { itemToDelete = item }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Download",
-                                tint = TextMuted
+                                contentDescription = "Delete",
+                                tint = AppTextTertiary,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
                 }
             }
-        }
-
-        // Empty State
-        if (downloads.isEmpty()) {
+        } else if (activeDownloads.isEmpty()) {
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 60.dp),
+                        .padding(vertical = AppSpacing.xxl),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(CinemaSurfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CloudDownload,
-                                contentDescription = "No Downloads",
-                                tint = AccentCyan,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
                         Text(
-                            text = "No Offline Media Yet",
-                            color = TextPrimary,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
+                            text = "No Downloads",
+                            style = AppTypography.cardTitle,
+                            color = AppTextSecondary
                         )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
+                        Spacer(modifier = Modifier.height(AppSpacing.xxs))
                         Text(
-                            text = "You can download any movie or TV show episode directly to your device. Look for the \"Download for Offline\" button on any media details page.",
-                            color = TextSecondary,
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                            text = "Download movies and episodes for offline viewing",
+                            style = AppTypography.metadata
                         )
                     }
                 }
@@ -470,46 +363,38 @@ fun DownloadsScreen(
         }
     }
 
-    // Delete Confirmation Dialog
+    // Confirmation Dialog
     if (itemToDelete != null) {
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
-            title = {
-                Text("Delete Downloaded File?", color = TextPrimary, fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Text(
-                    "Are you sure you want to delete \"${itemToDelete!!.title}\" from your offline storage?",
-                    color = TextSecondary
-                )
-            },
+            title = { Text("Delete Download", style = AppTypography.cardTitle) },
+            text = { Text("Remove \"${itemToDelete!!.itemName}\" from your device?", style = AppTypography.body) },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
-                        val id = itemToDelete!!.id
+                        viewModel.deleteDownload(itemToDelete!!.itemId)
                         itemToDelete = null
-                        viewModel.deleteDownload(id)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentRed)
+                    }
                 ) {
-                    Text("Delete", color = Color.White)
+                    Text("Delete", color = AppLiveRed, fontWeight = FontWeight.Medium)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { itemToDelete = null }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text("Cancel", color = AppTextSecondary)
                 }
             },
-            containerColor = CinemaDarkSurface
+            containerColor = AppElevatedSurface,
+            shape = RoundedCornerShape(AppRadii.modal)
         )
     }
 }
 
 private fun formatBytes(bytes: Long): String {
     val mb = bytes / (1024.0 * 1024.0)
-    return if (mb >= 1000) {
-        String.format("%.2f GB", mb / 1024.0)
+    return if (mb >= 1024) {
+        String.format("%.1f GB", mb / 1024.0)
     } else {
-        String.format("%.1f MB", mb)
+        String.format("%.0f MB", mb)
     }
 }

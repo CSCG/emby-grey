@@ -1,16 +1,15 @@
 package com.example.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,13 +23,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Traffic
 import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,26 +46,29 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
 import com.example.data.model.EmbyItemDto
 import com.example.data.model.LiveTvChannelDto
-import com.example.ui.theme.AccentAmber
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentEmerald
-import com.example.ui.theme.AccentPurple
-import com.example.ui.theme.AccentRed
-import com.example.ui.theme.CinemaBlack
-import com.example.ui.theme.CinemaCardBorder
-import com.example.ui.theme.CinemaDarkSurface
-import com.example.ui.theme.CinemaSurfaceVariant
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.AppAccent
+import com.example.ui.theme.AppBackground
+import com.example.ui.theme.AppDivider
+import com.example.ui.theme.AppElevatedSurface
+import com.example.ui.theme.AppLiveRed
+import com.example.ui.theme.AppRadii
+import com.example.ui.theme.AppSelectedSurface
+import com.example.ui.theme.AppSpacing
+import com.example.ui.theme.AppSurface
+import com.example.ui.theme.AppTextPrimary
+import com.example.ui.theme.AppTextSecondary
+import com.example.ui.theme.AppTextTertiary
+import com.example.ui.theme.AppTypography
 import com.example.ui.viewmodel.EmbyViewModel
 
 @Composable
@@ -97,7 +96,7 @@ fun LiveTvScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(AppBackground)
             .statusBarsPadding()
             .testTag("live_tv_screen")
     ) {
@@ -105,62 +104,29 @@ fun LiveTvScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(Color(0xFFE50914), AccentPurple))),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LiveTv,
-                        contentDescription = "Live TV",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Live TV & Guides",
-                            color = TextPrimary,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        // Pulsing Live Dot
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFE50914))
-                        )
-                    }
-                    Text(
-                        text = "${channels.size} live channels & cameras active",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                }
+            Column {
+                Text(
+                    text = "Live TV",
+                    style = AppTypography.sectionTitle
+                )
+                Text(
+                    text = "${channels.size} channels available",
+                    style = AppTypography.metadata
+                )
             }
 
             IconButton(
                 onClick = { viewModel.refreshLiveTv() },
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(CinemaSurfaceVariant)
-                    .testTag("refresh_live_tv_button")
+                modifier = Modifier.testTag("refresh_live_tv_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh Guide",
-                    tint = AccentCyan,
+                    contentDescription = "Refresh",
+                    tint = AppTextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -169,8 +135,8 @@ fun LiveTvScreen(
         // Category Filter Chips
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(horizontal = AppSpacing.md),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)
         ) {
             items(categories) { category ->
                 val isSelected = category == selectedCategory
@@ -181,26 +147,22 @@ fun LiveTvScreen(
                         Text(
                             text = category,
                             fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
                         )
                     },
+                    shape = RoundedCornerShape(AppRadii.badge),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = if (category.contains("Iowa")) AccentAmber else AccentCyan,
-                        selectedLabelColor = CinemaBlack,
-                        containerColor = CinemaSurfaceVariant,
-                        labelColor = TextPrimary
+                        selectedContainerColor = AppSelectedSurface,
+                        selectedLabelColor = AppTextPrimary,
+                        containerColor = AppElevatedSurface,
+                        labelColor = AppTextSecondary
                     ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        borderColor = if (isSelected) (if (category.contains("Iowa")) AccentAmber else AccentCyan) else CinemaCardBorder,
-                        selectedBorderColor = if (category.contains("Iowa")) AccentAmber else AccentCyan,
-                        enabled = true,
-                        selected = isSelected
-                    )
+                    border = null
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(AppSpacing.sm))
 
         // Channels & EPG List
         if (isLoading && channels.isEmpty()) {
@@ -210,83 +172,22 @@ fun LiveTvScreen(
                     .padding(bottom = 80.dp),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = AccentCyan)
+                CircularProgressIndicator(
+                    color = AppAccent,
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .weight(1f),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                contentPadding = PaddingValues(start = AppSpacing.md, end = AppSpacing.md, bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.md)
             ) {
-                // Feature banner for Cedar Falls & Iowa local cams
-                if (selectedCategory == "Iowa & Cedar Falls" || selectedCategory == "All") {
-                    item {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = CinemaDarkSurface,
-                            border = BorderStroke(1.dp, AccentAmber.copy(alpha = 0.4f)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 4.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(AccentAmber.copy(alpha = 0.2f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Videocam,
-                                        contentDescription = null,
-                                        tint = AccentAmber,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = "Cedar Falls & Iowa 511",
-                                            color = TextPrimary,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Surface(
-                                            shape = RoundedCornerShape(4.dp),
-                                            color = AccentAmber.copy(alpha = 0.25f)
-                                        ) {
-                                            Text(
-                                                text = "LOCAL HUB",
-                                                color = AccentAmber,
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Live IA511 highway traffic cameras (US-218, Viking Rd, UNI campus), Eastern Iowa Doppler weather & news.",
-                                        color = TextSecondary,
-                                        fontSize = 11.sp,
-                                        lineHeight = 15.sp
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
                 items(filteredChannels, key = { it.id }) { channel ->
-                    LiveChannelCard(
+                    LiveChannelGuideCard(
                         channel = channel,
                         logoUrl = viewModel.getChannelLogoUrl(channel),
                         onWatch = {
@@ -300,292 +201,246 @@ fun LiveTvScreen(
     }
 }
 
+/**
+ * Modern content-first Live TV channel item.
+ * Clean 16:9 thumbnail preview, small red LIVE indicator, title, metadata, and upcoming guide.
+ */
 @Composable
-fun LiveChannelCard(
+fun LiveChannelGuideCard(
     channel: LiveTvChannelDto,
     logoUrl: String?,
     onWatch: () -> Unit
 ) {
+    val context = LocalContext.current
     val isTraffic = channel.isTrafficCam
+    val previewImage = channel.snapshotUrl ?: logoUrl
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { onWatch() }
-            .border(1.dp, if (isTraffic) AccentAmber.copy(alpha = 0.35f) else CinemaCardBorder, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(AppRadii.card))
+            .clickable(onClick = onWatch)
             .testTag("channel_${channel.id}"),
-        shape = RoundedCornerShape(14.dp),
-        color = CinemaDarkSurface
+        shape = RoundedCornerShape(AppRadii.card),
+        color = AppElevatedSurface
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(AppSpacing.sm)) {
+            // Top Preview & Info Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                // 16:9 Preview Frame
+                Box(
+                    modifier = Modifier
+                        .width(130.dp)
+                        .aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(AppRadii.tag))
+                        .background(AppSurface)
                 ) {
-                    // Channel Logo / Camera Thumbnail
-                    Box(
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(CinemaSurfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (!logoUrl.isNullOrBlank()) {
-                            AsyncImage(
-                                model = logoUrl,
-                                contentDescription = channel.name,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
+                    if (!previewImage.isNullOrBlank()) {
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(previewImage)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = channel.name,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            loading = {
+                                Box(modifier = Modifier.fillMaxSize().background(AppSurface))
+                            },
+                            error = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize().background(AppSurface),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Tv,
+                                        contentDescription = null,
+                                        tint = AppTextTertiary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(AppSurface),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
-                                imageVector = if (isTraffic) Icons.Default.Videocam else Icons.Default.Tv,
+                                imageVector = Icons.Default.Tv,
                                 contentDescription = null,
-                                tint = if (isTraffic) AccentAmber else AccentCyan,
+                                tint = AppTextTertiary,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = channel.name,
-                                color = TextPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (channel.number != null) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = Color.White.copy(alpha = 0.12f)
-                                ) {
-                                    Text(
-                                        text = "CH ${channel.number}",
-                                        color = TextSecondary,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                        }
-
+                    // Small consistent red LIVE indicator
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp),
+                        shape = RoundedCornerShape(AppRadii.badge),
+                        color = Color.Black.copy(alpha = 0.7f)
+                    ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 2.dp)
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (!channel.location.isNullOrBlank()) {
-                                Icon(
-                                    imageVector = Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    tint = AccentAmber,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text(
-                                    text = channel.location,
-                                    color = AccentAmber,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "•",
-                                    color = TextMuted,
-                                    fontSize = 11.sp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(AppLiveRed)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = channel.category,
-                                color = if (isTraffic) AccentAmber else AccentCyan,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
+                                text = "LIVE",
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
                 }
 
-                // Channel Source Tag
-                val (tagText, tagColor) = when {
-                    channel.isTrafficCam -> "DOT LIVE CAM" to AccentAmber
-                    channel.category == "Classic Cartoons" -> "RETRO TOONS" to AccentCyan
-                    channel.category == "Anime" -> "ANIME 24/7" to AccentPurple
-                    channel.isOnlineFast -> "FREE FAST" to AccentEmerald
-                    else -> "EMBY TUNER" to AccentPurple
-                }
+                Spacer(modifier = Modifier.width(AppSpacing.sm))
 
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = tagColor.copy(alpha = 0.18f),
-                    border = BorderStroke(1.dp, tagColor.copy(alpha = 0.5f))
+                // Channel Name & Currently Playing
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(top = 2.dp)
                 ) {
-                    Text(
-                        text = tagText,
-                        color = tagColor,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // EPG Program Info Card
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = CinemaSurfaceVariant.copy(alpha = 0.65f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(10.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isTraffic) AccentAmber else Color(0xFFE50914))
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = channel.name,
+                            style = AppTypography.cardTitle,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (channel.number != null) {
                             Text(
-                                text = if (isTraffic) "CAMERA ACTIVE" else "NOW PLAYING",
-                                color = if (isTraffic) AccentAmber else Color(0xFFE50914),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                        }
-
-                        val timeInfo = channel.currentProgram?.formattedTime
-                        if (!timeInfo.isNullOrBlank()) {
-                            Text(
-                                text = timeInfo,
-                                color = AccentCyan,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else if (!channel.weatherNote.isNullOrBlank()) {
-                            Text(
-                                text = channel.weatherNote,
-                                color = AccentEmerald,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        } else {
-                            Text(
-                                text = "Live Stream",
-                                color = TextMuted,
-                                fontSize = 11.sp
+                                text = "Ch ${channel.number}",
+                                style = AppTypography.metadata,
+                                color = AppTextTertiary
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
+                    val programName = channel.currentProgram?.name ?: if (isTraffic) (channel.location ?: "Traffic Camera") else "Live Stream"
                     Text(
-                        text = channel.currentProgram?.name ?: "24/7 Continuous Live Broadcast",
-                        color = TextPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = programName,
+                        style = AppTypography.body,
+                        color = AppTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    if (!channel.currentProgram?.overview.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(3.dp))
-                        Text(
-                            text = channel.currentProgram!!.overview!!,
-                            color = TextSecondary,
-                            fontSize = 11.sp,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(2.dp))
 
-                    // Upcoming Schedule Guide
-                    if (channel.upcomingPrograms.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                    val timeOrSource = channel.currentProgram?.formattedTime ?: channel.location ?: channel.category
+                    Text(
+                        text = timeOrSource,
+                        style = AppTypography.metadata,
+                        color = if (channel.currentProgram?.formattedTime != null) AppAccent else AppTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Overview or upcoming programs if present
+            if (!channel.currentProgram?.overview.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
+                Text(
+                    text = channel.currentProgram!!.overview!!,
+                    style = AppTypography.metadata,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // Upcoming Schedule Guide
+            if (channel.upcomingPrograms.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(AppDivider)
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
+
+                channel.upcomingPrograms.take(2).forEach { upNext ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 1.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "UPCOMING SCHEDULE",
-                            color = TextMuted,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            text = upNext.name,
+                            style = AppTypography.metadata,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        channel.upcomingPrograms.take(3).forEach { upNext ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = upNext.name,
-                                    color = TextSecondary,
-                                    fontSize = 11.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                if (!upNext.startDate.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = upNext.startDate,
-                                        color = AccentCyan,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
+                        if (!upNext.startDate.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.width(AppSpacing.xs))
+                            Text(
+                                text = upNext.startDate,
+                                style = AppTypography.metadata,
+                                color = AppTextTertiary
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(AppSpacing.xs))
 
-            // Watch Live Button
-            Button(
-                onClick = onWatch,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isTraffic) AccentAmber else Color(0xFFE50914),
-                    contentColor = if (isTraffic) CinemaBlack else Color.White
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
-                    .testTag("watch_live_${channel.id}")
+            // Action Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
             ) {
-                Icon(
-                    imageVector = if (isTraffic) Icons.Default.Videocam else Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = if (isTraffic) "View Traffic Camera Live" else "Watch Channel Live",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Button(
+                    onClick = onWatch,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppSelectedSurface,
+                        contentColor = AppTextPrimary
+                    ),
+                    shape = RoundedCornerShape(AppRadii.button),
+                    modifier = Modifier
+                        .height(34.dp)
+                        .testTag("watch_live_${channel.id}"),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = AppAccent
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Watch",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }

@@ -18,8 +18,12 @@ import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.mediacodec.MediaCodecDecoderException
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.source.BehindLiveWindowException
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.video.MediaCodecVideoDecoderException
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.example.data.model.ChapterInfoDto
 import com.example.data.model.EmbyItemDto
@@ -142,6 +146,69 @@ class PlayerViewModel(
         initialQuality: PlaybackQuality = repository.preferences.defaultQuality,
         startFromBeginning: Boolean = false
     ) {
+        // Stop and release previous playback and clear tracking
+        progressTrackingJob?.cancel()
+        progressTrackingJob = null
+        exoPlayer?.stop()
+        exoPlayer?.release()
+        exoPlayer = null
+
+        // If a Series or Season container is passed, automatically resolve its first playable episode
+        if (item.type.equals("Series", ignoreCase = true) || item.type.equals("Season", ignoreCase = true)) {
+            currentItem = item
+            _uiState.value = PlayerUiState(
+                isBuffering = true,
+                errorMessage = null,
+                isLiveStream = false,
+                isLiquidTv = false
+            )
+            viewModelScope.launch {
+                val eps = repository.getEpisodes(item.id)
+                val targetEp = eps.firstOrNull { it.resumePositionTicks > 0 && !it.isPlayed }
+                    ?: eps.firstOrNull { !it.isPlayed }
+                    ?: eps.firstOrNull()
+                if (targetEp != null) {
+                    Log.d("PlayerViewModel", "Resolved series '${item.name}' to episode: ${targetEp.name}")
+                    initializePlayer(context, targetEp, localFile, initialQuality, startFromBeginning)
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isBuffering = false,
+                        isPlaying = false,
+                        errorMessage = "No playable episodes found for ${item.name}."
+                    )
+                }
+            }
+            return
+        }
+
+        // If a Collection or BoxSet container is passed, automatically resolve its first playable title
+        if (item.type.equals("BoxSet", ignoreCase = true) ||
+            item.type.equals("CollectionFolder", ignoreCase = true) ||
+            item.type.equals("Playlist", ignoreCase = true)) {
+            currentItem = item
+            _uiState.value = PlayerUiState(
+                isBuffering = true,
+                errorMessage = null,
+                isLiveStream = false,
+                isLiquidTv = false
+            )
+            viewModelScope.launch {
+                val titles = repository.getCollectionItems(item.id)
+                val firstTitle = titles.firstOrNull()
+                if (firstTitle != null) {
+                    Log.d("PlayerViewModel", "Resolved collection '${item.name}' to title: ${firstTitle.name}")
+                    initializePlayer(context, firstTitle, localFile, initialQuality, startFromBeginning)
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isBuffering = false,
+                        isPlaying = false,
+                        errorMessage = "No playable titles found in ${item.name}."
+                    )
+                }
+            }
+            return
+        }
+
         val isLiquidTv = item.id == "free_liquid_tv" || item.name.contains("Liquid Television", ignoreCase = true)
         val initialItem = if (isLiquidTv) {
             val randomEp = LiquidTvCatalog.getRandomEpisode()
@@ -157,9 +224,11 @@ class PlayerViewModel(
         val isOffline = localFile != null && File(localFile).exists()
         val chaps = item.chapters ?: emptyList()
         hasUpNextBeenDismissed = false
-        val isLive = item.type == "LiveTvChannel" || item.type == "TvChannel"
+        val isLive = item.type.equals("LiveTvChannel", ignoreCase = true) || item.type.equals("TvChannel", ignoreCase = true)
+        fallbackAttempt = 0
+        hasAttachedSubtitles = false
 
-        _uiState.value = _uiState.value.copy(
+        _uiState.value = PlayerUiState(
             quality = if (isOffline) PlaybackQuality.DIRECT_PLAY else initialQuality,
             isOfflinePlayback = isOffline,
             isLiveStream = isLive,
@@ -172,7 +241,8 @@ class PlayerViewModel(
             canSkipIntro = false,
             introEndMs = null,
             showUpNextOverlay = false,
-            nextEpisode = null
+            nextEpisode = null,
+            errorMessage = null
         )
 
         // Preload next episode if this item is a TV episode
@@ -193,9 +263,24 @@ class PlayerViewModel(
             return
         }
 
-        // Build hardware-accelerated renderers factory
+        // Custom MediaCodecSelector: on goldfish Android emulators, c2.goldfish.hevc.decoder fails with NO_EXCEEDS_CAPABILITIES.
+        // Deprioritize goldfish decoders so reliable software decoders (c2.android.*) decode HEVC directly.
+        val customMediaCodecSelector = MediaCodecSelector { mimeType, requiresSecure, requiresTunneling ->
+            val decoders = MediaCodecUtil.getDecoderInfos(mimeType, requiresSecure, requiresTunneling)
+            decoders.sortedWith { d1, d2 ->
+                val isGoldfish1 = d1.name.contains("goldfish", ignoreCase = true)
+                val isGoldfish2 = d2.name.contains("goldfish", ignoreCase = true)
+                if (isGoldfish1 && !isGoldfish2) 1
+                else if (!isGoldfish1 && isGoldfish2) -1
+                else 0
+            }
+        }
+
+        // Build hardware-accelerated renderers factory with decoder fallback enabled
         val renderersFactory = DefaultRenderersFactory(context)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            .setEnableDecoderFallback(true)
+            .setMediaCodecSelector(customMediaCodecSelector)
 
         // Resilient HTTP Data Source with browser User-Agent, redirects and extended timeouts
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
@@ -276,19 +361,84 @@ class PlayerViewModel(
                     return
                 }
 
-                // Level 2: Automatic failover to verified resilient stream for this channel/category
-                if (fallbackAttempt < 2) {
+                // Level 2: Automatic failover to verified resilient stream ONLY for Free FAST Live TV channels (NEVER for VOD/Series)
+                val isFreeFastChannel = _uiState.value.isLiveStream && (currentItem?.id?.startsWith("free_") == true)
+                if (isFreeFastChannel && fallbackAttempt < 2) {
                     fallbackAttempt++
                     val fallbackUrl = getResilientFallbackStream(currentItem)
-                    Log.w("PlayerViewModel", "Stream error encountered. Automatically failing over to resilient feed (attempt $fallbackAttempt): $fallbackUrl")
+                    Log.w("PlayerViewModel", "Live stream error encountered. Automatically failing over to resilient feed (attempt $fallbackAttempt): $fallbackUrl")
                     loadDirectStream(fallbackUrl)
                     return
                 }
 
+                // Level 3: If decoding failed (e.g. HEVC codec unsupported on this device/emulator), automatically switch to H.264 server transcode
+                val isDecodeError = error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
+                                    error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
+                                    error.cause is MediaCodecDecoderException ||
+                                    error.cause is MediaCodecVideoDecoderException ||
+                                    error.message?.contains("NO_EXCEEDS_CAPABILITIES", ignoreCase = true) == true ||
+                                    error.message?.contains("decoder", ignoreCase = true) == true
+
+                if (!_uiState.value.isLiveStream && isDecodeError && fallbackAttempt < 3) {
+                    val resumePos = player.currentPosition.coerceAtLeast(0L)
+                    fallbackAttempt++
+                    if (fallbackAttempt == 1) {
+                        Log.w("PlayerViewModel", "DirectPlay decoding failed (HEVC/unsupported codec). Switching to HLS H.264 server transcode...")
+                        _uiState.value = _uiState.value.copy(quality = PlaybackQuality.P1080)
+                        loadMedia(
+                            initialPositionMs = resumePos,
+                            startFromBeginning = false,
+                            includeSubtitles = false
+                        )
+                        return
+                    } else if (fallbackAttempt == 2 && currentItem != null) {
+                        Log.w("PlayerViewModel", "HLS transcode failed. Switching to Progressive MP4 H.264 server transcode...")
+                        _uiState.value = _uiState.value.copy(quality = PlaybackQuality.P720)
+                        val mp4Url = repository.buildProgressiveTranscodeUrl(
+                            currentItem!!.id,
+                            currentItem?.mediaSources?.firstOrNull()?.id,
+                            PlaybackQuality.P720
+                        )
+                        loadDirectStream(mp4Url, resumePos)
+                        return
+                    }
+                }
+
+                // Level 4: For VOD content, if transcode failed and it wasn't a decode error, retry in direct play or progressive transcode
+                if (!_uiState.value.isLiveStream && !isDecodeError && fallbackAttempt < 2) {
+                    val resumePos = player.currentPosition.coerceAtLeast(0L)
+                    fallbackAttempt++
+                    if (_uiState.value.quality != PlaybackQuality.DIRECT_PLAY) {
+                        Log.w("PlayerViewModel", "Transcode stream error. Retrying in Direct Play mode...")
+                        _uiState.value = _uiState.value.copy(quality = PlaybackQuality.DIRECT_PLAY)
+                        loadMedia(
+                            initialPositionMs = resumePos,
+                            startFromBeginning = false,
+                            includeSubtitles = false
+                        )
+                        return
+                    } else if (currentItem != null) {
+                        Log.w("PlayerViewModel", "Direct play HTTP error. Trying progressive MP4 server transcode...")
+                        _uiState.value = _uiState.value.copy(quality = PlaybackQuality.P1080)
+                        val mp4Url = repository.buildProgressiveTranscodeUrl(
+                            currentItem!!.id,
+                            currentItem?.mediaSources?.firstOrNull()?.id,
+                            PlaybackQuality.P1080
+                        )
+                        loadDirectStream(mp4Url, resumePos)
+                        return
+                    }
+                }
+
+                val title = currentItem?.name ?: "Media"
                 _uiState.value = _uiState.value.copy(
                     isBuffering = false,
                     isPlaying = false,
-                    errorMessage = "Stream momentarily unavailable. Tap Retry to reconnect."
+                    errorMessage = if (_uiState.value.isLiveStream) {
+                        "Live stream momentarily unavailable. Tap Retry to reconnect."
+                    } else {
+                        "Unable to play \"$title\". Tap Retry to reconnect."
+                    }
                 )
             }
         })
@@ -459,7 +609,7 @@ class PlayerViewModel(
         }
     }
 
-    private fun loadDirectStream(streamUrl: String) {
+    private fun loadDirectStream(streamUrl: String, initialPositionMs: Long? = null) {
         val player = exoPlayer ?: return
         viewModelScope.launch {
             val resolved = if (_uiState.value.isLiveStream && !_uiState.value.isLiquidTv) resolveLiveStreamUrl(streamUrl) else streamUrl
@@ -500,6 +650,8 @@ class PlayerViewModel(
             player.prepare()
             if (_uiState.value.isLiveStream && !_uiState.value.isLiquidTv) {
                 player.seekToDefaultPosition()
+            } else if (initialPositionMs != null && initialPositionMs > 0L) {
+                player.seekTo(initialPositionMs)
             }
             player.play()
         }
@@ -853,6 +1005,7 @@ class PlayerViewModel(
         val dur = exoPlayer?.duration ?: 0L
         val item = currentItem
         progressTrackingJob?.cancel()
+        progressTrackingJob = null
         if (item != null) {
             viewModelScope.launch {
                 repository.reportPlaybackStopped(
@@ -863,8 +1016,14 @@ class PlayerViewModel(
                 )
             }
         }
+        exoPlayer?.stop()
         exoPlayer?.release()
         exoPlayer = null
+        currentItem = null
+        localFilePath = null
+        fallbackAttempt = 0
+        hasAttachedSubtitles = false
+        _uiState.value = PlayerUiState()
     }
 
     override fun onCleared() {

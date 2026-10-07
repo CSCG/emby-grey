@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,26 +16,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ClosedCaption
-import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.SdCard
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -51,24 +43,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.PlaybackQuality
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentEmerald
-import com.example.ui.theme.AccentPurple
-import com.example.ui.theme.AccentRed
-import com.example.ui.theme.CinemaBlack
-import com.example.ui.theme.CinemaCardBorder
-import com.example.ui.theme.CinemaDarkSurface
-import com.example.ui.theme.CinemaSurfaceVariant
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.AppAccent
+import com.example.ui.theme.AppBackground
+import com.example.ui.theme.AppDivider
+import com.example.ui.theme.AppElevatedSurface
+import com.example.ui.theme.AppLiveRed
+import com.example.ui.theme.AppRadii
+import com.example.ui.theme.AppSelectedSurface
+import com.example.ui.theme.AppSpacing
+import com.example.ui.theme.AppSurface
+import com.example.ui.theme.AppTextPrimary
+import com.example.ui.theme.AppTextSecondary
+import com.example.ui.theme.AppTextTertiary
+import com.example.ui.theme.AppTypography
 import com.example.ui.viewmodel.EmbyViewModel
 
 @Composable
@@ -91,47 +84,26 @@ fun SettingsScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(AppBackground)
             .statusBarsPadding()
             .testTag("settings_screen_content"),
-        contentPadding = PaddingValues(bottom = 100.dp)
+        contentPadding = PaddingValues(bottom = 120.dp)
     ) {
-        // Top Header
+        // Header
         item {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(AccentCyan, AccentPurple))),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings",
-                        tint = CinemaBlack,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Settings & Transcoding",
-                        color = TextPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Customize playback, hardware encoding, & server",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                }
+                Text(
+                    text = "Settings",
+                    style = AppTypography.sectionTitle
+                )
+                Text(
+                    text = "Server connection & playback preferences",
+                    style = AppTypography.metadata
+                )
             }
         }
 
@@ -140,342 +112,220 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .border(1.dp, CinemaCardBorder, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                color = CinemaDarkSurface
+                    .padding(horizontal = AppSpacing.md, vertical = AppSpacing.xs),
+                shape = RoundedCornerShape(AppRadii.card),
+                color = AppElevatedSurface
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                Column(modifier = Modifier.padding(AppSpacing.md)) {
+                    Text(
+                        text = "Current Server",
+                        style = AppTypography.cardTitle
+                    )
+                    Spacer(modifier = Modifier.height(AppSpacing.xs))
+
+                    Text(
+                        text = conn?.serverName ?: "Emby Server",
+                        style = AppTypography.body,
+                        color = AppTextPrimary
+                    )
+                    Text(
+                        text = conn?.url ?: "Not configured",
+                        style = AppTypography.metadata
+                    )
+                    Text(
+                        text = "User: ${conn?.username ?: "Guest"}",
+                        style = AppTypography.metadata,
+                        color = AppTextTertiary
+                    )
+
+                    Spacer(modifier = Modifier.height(AppSpacing.md))
+
+                    Button(
+                        onClick = { showDisconnectDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .testTag("switch_server_button"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AppSelectedSurface,
+                            contentColor = AppLiveRed
+                        ),
+                        shape = RoundedCornerShape(AppRadii.button)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Dns, contentDescription = "Server", tint = AccentCyan, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Switch Server", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+        }
+
+        // Playback & Transcoding Settings
+        item {
+            Spacer(modifier = Modifier.height(AppSpacing.sm))
+            Text(
+                text = "Playback",
+                style = AppTypography.cardTitle,
+                modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.xxs)
+            )
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AppSpacing.md, vertical = AppSpacing.xs),
+                shape = RoundedCornerShape(AppRadii.card),
+                color = AppElevatedSurface
+            ) {
+                Column {
+                    // Default Quality Selector
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { qualityMenuExpanded = true }
+                                .padding(AppSpacing.md),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Default Quality", style = AppTypography.cardTitle)
+                                Text("Quality when starting playback", style = AppTypography.metadata)
+                            }
                             Text(
-                                text = "Current Emby Server",
-                                color = TextPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                text = defaultQuality.label,
+                                style = AppTypography.metadata,
+                                color = AppAccent,
+                                fontWeight = FontWeight.Medium
                             )
                         }
 
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = AccentEmerald.copy(alpha = 0.2f)
+                        DropdownMenu(
+                            expanded = qualityMenuExpanded,
+                            onDismissRequest = { qualityMenuExpanded = false },
+                            modifier = Modifier
+                                .background(AppElevatedSurface)
+                                .clip(RoundedCornerShape(AppRadii.card))
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = "Active", tint = AccentEmerald, modifier = Modifier.size(12.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (conn?.isDemo == true) "DEMO MODE" else "CONNECTED",
-                                    color = AccentEmerald,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
+                            PlaybackQuality.values().forEach { q ->
+                                DropdownMenuItem(
+                                    text = { Text(q.label, color = AppTextPrimary, fontSize = 14.sp) },
+                                    trailingIcon = if (defaultQuality == q) {
+                                        { Icon(Icons.Default.Check, contentDescription = null, tint = AppAccent, modifier = Modifier.size(16.dp)) }
+                                    } else null,
+                                    onClick = {
+                                        defaultQuality = q
+                                        viewModel.updateDefaultQuality(q)
+                                        qualityMenuExpanded = false
+                                    }
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = "Server: ${conn?.serverName ?: "Emby Server"}",
-                        color = TextPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Address: ${conn?.url ?: "Not configured"}",
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = "User: ${conn?.username ?: "Guest"}",
-                        color = TextMuted,
-                        fontSize = 12.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedButton(
-                        onClick = { showDisconnectDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .testTag("switch_server_button"),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentRed),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Switch Server", modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Switch / Disconnect Server", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-
-        // Transcoding & Hardware Acceleration Settings
-        item {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .border(1.dp, CinemaCardBorder, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                color = CinemaDarkSurface
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Memory, contentDescription = "Transcoding", tint = AccentPurple, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Hardware-Accelerated Transcoding",
-                            color = TextPrimary,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(AppDivider))
 
                     // Hardware Acceleration Switch
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(AppSpacing.md),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Request GPU Hardware Transcoding",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Requests NVENC, Intel QuickSync, or VAAPI hardware transcoding from the server to minimize server CPU overhead.",
-                                color = TextSecondary,
-                                fontSize = 11.sp,
-                                lineHeight = 16.sp
-                            )
+                            Text("Hardware Acceleration", style = AppTypography.cardTitle)
+                            Text("Use GPU decoders for smoother playback", style = AppTypography.metadata)
                         }
-
                         Switch(
                             checked = hwAccel,
                             onCheckedChange = {
                                 hwAccel = it
-                                viewModel.setHwAcceleration(it)
+                                viewModel.setHardwareAcceleration(it)
                             },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = AccentCyan,
-                                checkedTrackColor = AccentCyan.copy(alpha = 0.4f)
-                            ),
-                            modifier = Modifier.testTag("hw_accel_switch")
+                                checkedThumbColor = Color(0xFF04191C),
+                                checkedTrackColor = AppAccent,
+                                uncheckedThumbColor = AppTextTertiary,
+                                uncheckedTrackColor = AppSelectedSurface
+                            )
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(AppDivider))
 
-                    // Default Quality Dropdown
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
+                    // Preferred Subtitles
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { subMenuExpanded = true }
+                                .padding(AppSpacing.md),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Subtitle Language", style = AppTypography.cardTitle)
+                                Text("Preferred language for sidecar subtitles", style = AppTypography.metadata)
+                            }
                             Text(
-                                text = "Default Playback Stream",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = defaultQuality.label,
-                                color = AccentCyan,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
+                                text = if (preferredSub.isBlank()) "None" else preferredSub.uppercase(),
+                                style = AppTypography.metadata,
+                                color = AppAccent,
+                                fontWeight = FontWeight.Medium
                             )
                         }
 
-                        Box {
-                            Button(
-                                onClick = { qualityMenuExpanded = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Change", color = TextPrimary, fontSize = 12.sp)
-                            }
-
-                            DropdownMenu(
-                                expanded = qualityMenuExpanded,
-                                onDismissRequest = { qualityMenuExpanded = false },
-                                modifier = Modifier.background(CinemaDarkSurface)
-                            ) {
-                                PlaybackQuality.values().forEach { q ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Text(q.label, color = TextPrimary)
-                                                if (q == defaultQuality) {
-                                                    Icon(Icons.Default.Check, contentDescription = null, tint = AccentCyan)
-                                                }
-                                            }
-                                        },
-                                        onClick = {
-                                            defaultQuality = q
-                                            viewModel.setDefaultQuality(q)
-                                            qualityMenuExpanded = false
-                                        }
-                                    )
-                                }
+                        DropdownMenu(
+                            expanded = subMenuExpanded,
+                            onDismissRequest = { subMenuExpanded = false },
+                            modifier = Modifier
+                                .background(AppElevatedSurface)
+                                .clip(RoundedCornerShape(AppRadii.card))
+                        ) {
+                            listOf("" to "None", "eng" to "English", "spa" to "Spanish", "fra" to "French", "deu" to "German", "jpn" to "Japanese").forEach { (code, name) ->
+                                DropdownMenuItem(
+                                    text = { Text(name, color = AppTextPrimary, fontSize = 14.sp) },
+                                    trailingIcon = if (preferredSub == code) {
+                                        { Icon(Icons.Default.Check, contentDescription = null, tint = AppAccent, modifier = Modifier.size(16.dp)) }
+                                    } else null,
+                                    onClick = {
+                                        preferredSub = code
+                                        viewModel.updatePreferredSubtitle(code)
+                                        subMenuExpanded = false
+                                    }
+                                )
                             }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Preferred Subtitle Language
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Preferred Subtitle Language",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = preferredSub,
-                                color = AccentEmerald,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Box {
-                            Button(
-                                onClick = { subMenuExpanded = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Change", color = TextPrimary, fontSize = 12.sp)
-                            }
-
-                            DropdownMenu(
-                                expanded = subMenuExpanded,
-                                onDismissRequest = { subMenuExpanded = false },
-                                modifier = Modifier.background(CinemaDarkSurface)
-                            ) {
-                                listOf("English", "Spanish", "French", "German", "Japanese", "Off").forEach { lang ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Text(lang, color = TextPrimary)
-                                                if (lang == preferredSub) {
-                                                    Icon(Icons.Default.Check, contentDescription = null, tint = AccentEmerald)
-                                                }
-                                            }
-                                        },
-                                        onClick = {
-                                            preferredSub = lang
-                                            viewModel.setPreferredSubtitleLang(lang)
-                                            subMenuExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // About & Premiere-Free Note
-        item {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .border(1.dp, CinemaCardBorder, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                color = CinemaDarkSurface
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Info, contentDescription = "Info", tint = AccentCyan, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "About EmbyStream",
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "EmbyStream connects directly to your Emby server's open REST API. It bypasses Premiere playback locks for movies and TV shows, supports direct stream playback with ExoPlayer, requests server-side hardware transcoding, and handles offline synchronization straight to your device.",
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Version 1.0.0 • Native Android & Jetpack Compose",
-                        color = TextMuted,
-                        fontSize = 11.sp
-                    )
                 }
             }
         }
     }
 
-    // Disconnect Confirmation Dialog
+    // Disconnect Dialog
     if (showDisconnectDialog) {
         AlertDialog(
             onDismissRequest = { showDisconnectDialog = false },
-            title = { Text("Disconnect Server?", color = TextPrimary, fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    "You will return to the server setup screen where you can connect to another Emby server or reconnect.",
-                    color = TextSecondary
-                )
-            },
+            title = { Text("Disconnect Server", style = AppTypography.cardTitle) },
+            text = { Text("Disconnect from \"${conn?.serverName ?: "Emby Server"}\" and return to server setup?", style = AppTypography.body) },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
                         showDisconnectDialog = false
-                        viewModel.disconnectServer()
+                        viewModel.disconnect()
                         onDisconnect()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentRed)
+                    }
                 ) {
-                    Text("Disconnect", color = Color.White)
+                    Text("Disconnect", color = AppLiveRed, fontWeight = FontWeight.Medium)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDisconnectDialog = false }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text("Cancel", color = AppTextSecondary)
                 }
             },
-            containerColor = CinemaDarkSurface
+            containerColor = AppElevatedSurface,
+            shape = RoundedCornerShape(AppRadii.modal)
         )
     }
 }

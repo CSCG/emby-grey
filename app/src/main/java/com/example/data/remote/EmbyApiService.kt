@@ -74,7 +74,7 @@ interface EmbyApiService {
     @GET("Shows/{seriesId}/Episodes")
     suspend fun getEpisodes(
         @Path("seriesId") seriesId: String,
-        @Query("seasonId") seasonId: String,
+        @Query("seasonId") seasonId: String? = null,
         @Query("userId") userId: String,
         @Query("Fields") fields: String = "Overview,UserData,MediaSources,Genres,PrimaryImageAspectRatio,ImageTags,BackdropImageTags,Chapters,People"
     ): Response<ItemsResponse>
