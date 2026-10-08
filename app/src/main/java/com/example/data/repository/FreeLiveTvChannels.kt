@@ -267,6 +267,20 @@ object FreeLiveTvChannels {
                 genres = listOf("Classic Cartoons", "Vintage", "Animation")
             )
         ),
+        LiveTvChannelDto(
+            id = "free_buzzr",
+            name = "Buzzr TV (Retro Game Shows)",
+            number = "28",
+            category = "Classic Cartoons",
+            isOnlineFast = true,
+            streamUrl = "http://23.237.104.106:8080/USA_BUZZR/index.m3u8",
+            logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Buzzr_logo.svg/960px-Buzzr_logo.svg.png",
+            currentProgram = LiveTvProgramDto(
+                name = "Vintage Game Show Marathons",
+                overview = "The iconic vintage American game show channel featuring Match Game, Family Feud, Supermarket Sweep, Password, and Card Sharks.",
+                genres = listOf("Retro", "Game Shows", "Classics", "Nostalgia")
+            )
+        ),
 
         // ==================== ANIME 24/7 ====================
         LiveTvChannelDto(
@@ -369,6 +383,62 @@ object FreeLiveTvChannels {
                 genres = listOf("Science", "Documentary")
             )
         ),
+        LiveTvChannelDto(
+            id = "free_court_tv",
+            name = "Court TV Live",
+            number = "46",
+            category = "News & Weather",
+            isOnlineFast = true,
+            streamUrl = "https://content.uplynk.com/channel/6c0bd0f94b1d4526a98676e9699a10ef.m3u8",
+            logoUrl = "https://graph.facebook.com/courttv/picture?width=200&height=200",
+            currentProgram = LiveTvProgramDto(
+                name = "Live Courtroom Coverage & Legal Trials",
+                overview = "Gavel-to-gavel live courtroom coverage of high-profile trials, expert analysis, and legal commentary.",
+                genres = listOf("True Crime", "Court", "Legal", "News")
+            )
+        ),
+        LiveTvChannelDto(
+            id = "free_fox_weather",
+            name = "Fox Weather 24/7",
+            number = "47",
+            category = "News & Weather",
+            isOnlineFast = true,
+            streamUrl = "https://247wlive.foxweather.com/stream/index.m3u8",
+            logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Fox_Weather_logo.svg/500px-Fox_Weather_logo.svg.png",
+            currentProgram = LiveTvProgramDto(
+                name = "Live Weather Radar & Severe Storm Alerts",
+                overview = "24/7 live meteorologist updates, live 3D Doppler radar, storm chasing coverage, and national forecasts.",
+                genres = listOf("Weather", "Radar", "Live", "Storms")
+            )
+        ),
+        LiveTvChannelDto(
+            id = "free_gb_news",
+            name = "GB News Live (UK)",
+            number = "48",
+            category = "News & Weather",
+            isOnlineFast = true,
+            streamUrl = "https://live-gbnews.simplestreamcdn.com/live5/gbnews/bitrate1.isml/manifest.m3u8",
+            logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/3/35/GB_News_Logo.svg/500px-GB_News_Logo.svg.png",
+            currentProgram = LiveTvProgramDto(
+                name = "Live UK Breaking News & Debate",
+                overview = "24-hour British television news channel with rolling national headlines, parliamentary reporting, interviews, and debate.",
+                genres = listOf("News", "UK", "Debate", "Current Affairs")
+            )
+        ),
+        LiveTvChannelDto(
+            id = "free_bloomberg_tv",
+            name = "Bloomberg Television Live",
+            number = "49",
+            category = "News & Weather",
+            isOnlineFast = true,
+            streamUrl = "https://bloomberg.com/media-manifest/streams/us.m3u8",
+            logoUrl = "https://i.imgur.com/VnCcH73.png",
+            currentProgram = LiveTvProgramDto(
+                name = "Bloomberg Markets: Global Open",
+                overview = "The global financial authority delivering live stock market quotes, Wall Street analysis, economic trends, and technology news.",
+                genres = listOf("Business", "Finance", "Markets", "News")
+            )
+        ),
 
         // ==================== SPORTS ====================
         LiveTvChannelDto(
@@ -398,6 +468,34 @@ object FreeLiveTvChannels {
                 name = "Golden Age Cinema & Feature Films",
                 overview = "24/7 vintage Hollywood feature films, classic mystery thrillers, film noir, and cinematic classics.",
                 genres = listOf("Movies", "Cinema", "Classics")
+            )
+        ),
+        LiveTvChannelDto(
+            id = "free_great_movies_uk",
+            name = "Great! Movies (UK)",
+            number = "62",
+            category = "Movies & TV",
+            isOnlineFast = true,
+            streamUrl = "https://amg01753-narrativeuk-amg01753c3-lg-gb-1833.playouts.now.amagi.tv/playlist/amg01753-narrativeuk-greatmovies-lggb/playlist.m3u8",
+            logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/9/92/Great%21_Movies_logo_2021.svg/500px-Great%21_Movies_logo_2021.svg.png",
+            currentProgram = LiveTvProgramDto(
+                name = "Great! Hollywood & British Cinema 24/7",
+                overview = "UK free-to-air cinema channel bringing big Hollywood blockbusters, award-winning dramas, romantic comedies, and classic modern features.",
+                genres = listOf("Movies", "UK", "Cinema", "Drama")
+            )
+        ),
+        LiveTvChannelDto(
+            id = "free_action_hollywood",
+            name = "Action Hollywood Movies",
+            number = "63",
+            category = "Movies & TV",
+            isOnlineFast = true,
+            streamUrl = "https://cdn-apse1-prod.tsv2.amagi.tv/linear/amg01076-lightningintern-actionhollywood-samsungnz/playlist.m3u8",
+            logoUrl = "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&q=80",
+            currentProgram = LiveTvProgramDto(
+                name = "High-Octane Action & Thriller Cinema",
+                overview = "Non-stop pulse-pounding Hollywood action, martial arts classics, crime thrillers, and explosive stunt-driven features.",
+                genres = listOf("Action", "Movies", "Thrillers")
             )
         ),
 
@@ -430,6 +528,50 @@ object FreeLiveTvChannels {
                 name = "Adventures & Animated Storybook Explorers",
                 overview = "Wholesome, colorful animated stories, music, and learning shows tailored for children and families.",
                 genres = listOf("Kids", "Animation", "Family")
+            )
+        ),
+        LiveTvChannelDto(
+            id = "free_pop_kids_uk",
+            name = "Pop TV (Kids & Cartoons)",
+            number = "82",
+            category = "Kids",
+            isOnlineFast = true,
+            streamUrl = "https://amg01753-narrativeentert-popkids-lggb-xyy5k.amagi.tv/ts-eu-w1-n2/playlist/amg01753-narrativeentert-popkids-lggb/playlist.m3u8",
+            logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/3/36/Pop_UK_TV_Logo_%282015%29.svg/500px-Pop_UK_TV_Logo_%282015%29.svg.png",
+            currentProgram = LiveTvProgramDto(
+                name = "Popular Animated Series & Adventures",
+                overview = "The UK's premier commercial children's channel featuring top animation, Pokémon, Miraculous, Alvinnn!!!, and vibrant cartoons.",
+                genres = listOf("Kids", "Cartoons", "Animation", "Family")
+            )
+        ),
+
+        // ==================== MUSIC & RADIO ====================
+        LiveTvChannelDto(
+            id = "free_now_80s",
+            name = "Now 80s (Retro Music TV)",
+            number = "91",
+            category = "Music & Radio",
+            isOnlineFast = true,
+            streamUrl = "https://lightning-now80s-samsunguk.amagi.tv/playlist.m3u8",
+            logoUrl = "https://i.imgur.com/8paz37m.png",
+            currentProgram = LiveTvProgramDto(
+                name = "80s Synth-Pop & New Wave Party",
+                overview = "Non-stop vintage 1980s music videos: Madonna, Michael Jackson, Duran Duran, Prince, Wham!, Depeche Mode, and classic hits.",
+                genres = listOf("Music", "80s", "Retro", "Pop")
+            )
+        ),
+        LiveTvChannelDto(
+            id = "free_now_rock",
+            name = "Now Rock (Classic & Modern Rock)",
+            number = "92",
+            category = "Music & Radio",
+            isOnlineFast = true,
+            streamUrl = "https://lightning-now90s-samsungnz.amagi.tv/playlist.m3u8",
+            logoUrl = "https://upload.wikimedia.org/wikipedia/en/8/89/NOW_Rock_logo.png",
+            currentProgram = LiveTvProgramDto(
+                name = "Rock Anthems & Legends",
+                overview = "24/7 stadium rock, grunge, 90s alternative, metal, and guitar anthems from Queen, Nirvana, Foo Fighters, and Led Zeppelin.",
+                genres = listOf("Music", "Rock", "Alternative", "Legends")
             )
         )
     )

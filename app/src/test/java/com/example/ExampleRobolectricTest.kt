@@ -71,4 +71,28 @@ class ExampleRobolectricTest {
             org.junit.Assert.assertTrue((it.userData?.playbackPositionTicks ?: 0L) > 0L)
         }
     }
+
+    @Test
+    fun `ten new IPTV channels are present with valid stream URLs and categories`() {
+        val newChannelIds = listOf(
+            "free_buzzr",
+            "free_court_tv",
+            "free_fox_weather",
+            "free_gb_news",
+            "free_bloomberg_tv",
+            "free_great_movies_uk",
+            "free_action_hollywood",
+            "free_pop_kids_uk",
+            "free_now_80s",
+            "free_now_rock"
+        )
+        val channels = com.example.data.repository.FreeLiveTvChannels.channels
+        newChannelIds.forEach { id ->
+            val ch = channels.firstOrNull { it.id == id }
+            assertNotNull("Channel $id should be present", ch)
+            org.junit.Assert.assertTrue("Channel $id should have a stream URL", !ch!!.streamUrl.isNullOrBlank())
+            org.junit.Assert.assertTrue("Stream URL should be an http URL", ch.streamUrl!!.startsWith("http"))
+            org.junit.Assert.assertTrue("Category should not be blank", ch.category.isNotBlank())
+        }
+    }
 }

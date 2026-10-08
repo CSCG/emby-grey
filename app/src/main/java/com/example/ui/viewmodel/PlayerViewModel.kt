@@ -663,16 +663,36 @@ class PlayerViewModel(
         return when {
             name.contains("Toonami", ignoreCase = true) || cat.contains("Toonami", ignoreCase = true) ->
                 "http://api.toonamiaftermath.com:3000/est/playlist.m3u8"
+            name.contains("Buzzr", ignoreCase = true) ->
+                "http://23.237.104.106:8080/USA_BUZZR/index.m3u8"
             cat.contains("Cartoons", ignoreCase = true) || name.contains("Cartoons", ignoreCase = true) ->
                 "https://daiconnect.com/live/hls/tvup/rk-cartoonclassics/578f4b7eb725168349ec0af81b21d388/index.m3u8"
             cat.contains("Anime", ignoreCase = true) || name.contains("Anime", ignoreCase = true) ->
                 "https://amg18481-amg18481c1-amgplt0352.playout.now3.amagi.tv/playlist/amg18481-amg18481c1-amgplt0352/playlist.m3u8"
+            name.contains("Pop", ignoreCase = true) ->
+                "https://amg01753-narrativeentert-popkids-lggb-xyy5k.amagi.tv/ts-eu-w1-n2/playlist/amg01753-narrativeentert-popkids-lggb/playlist.m3u8"
             cat.contains("Kids", ignoreCase = true) ->
                 "https://3abn.bozztv.com/3abn2/Kids_live/smil:Kids_live.smil/playlist.m3u8"
+            name.contains("Fox Weather", ignoreCase = true) ->
+                "https://247wlive.foxweather.com/stream/index.m3u8"
+            name.contains("Court TV", ignoreCase = true) ->
+                "https://content.uplynk.com/channel/6c0bd0f94b1d4526a98676e9699a10ef.m3u8"
+            name.contains("GB News", ignoreCase = true) ->
+                "https://live-gbnews.simplestreamcdn.com/live5/gbnews/bitrate1.isml/manifest.m3u8"
+            name.contains("Bloomberg", ignoreCase = true) ->
+                "https://bloomberg.com/media-manifest/streams/us.m3u8"
             cat.contains("News", ignoreCase = true) || cat.contains("Weather", ignoreCase = true) ->
                 "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8"
+            cat.contains("Music", ignoreCase = true) || name.contains("Now 80", ignoreCase = true) ->
+                "https://lightning-now80s-samsunguk.amagi.tv/playlist.m3u8"
+            name.contains("Now Rock", ignoreCase = true) ->
+                "https://lightning-now90s-samsungnz.amagi.tv/playlist.m3u8"
             cat.contains("Nature", ignoreCase = true) ->
                 "https://playertest.longtailvideo.com/adaptive/oceans/oceans.m3u8"
+            name.contains("Great! Movies", ignoreCase = true) ->
+                "https://amg01753-narrativeuk-amg01753c3-lg-gb-1833.playouts.now.amagi.tv/playlist/amg01753-narrativeuk-greatmovies-lggb/playlist.m3u8"
+            name.contains("Action Hollywood", ignoreCase = true) ->
+                "https://cdn-apse1-prod.tsv2.amagi.tv/linear/amg01076-lightningintern-actionhollywood-samsungnz/playlist.m3u8"
             cat.contains("Movie", ignoreCase = true) || cat.contains("Cinema", ignoreCase = true) ->
                 "https://30a-tv.com/feeds/pzaz/30atvmovies.m3u8"
             else ->
